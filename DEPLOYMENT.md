@@ -1,6 +1,6 @@
 # GitHub Pages 배포
 
-이 사이트는 빌드나 API 키가 필요 없는 정적 HTML/CSS/JavaScript 사이트입니다.
+이 사이트는 API 키나 백엔드가 필요 없는 정적 HTML/CSS/JavaScript 사이트입니다. 계산 라이브러리를 포함한 `app.js`가 커밋되어 있어 GitHub Pages에서 별도의 빌드 명령 없이 실행됩니다.
 
 ## 처음 공개하기
 
@@ -13,7 +13,7 @@
 
 ## 변경 사항 반영
 
-`gh-pages` 브랜치의 `index.html`, `style.css`, `app.js`를 수정하고 커밋한 뒤 푸시하면 다시 배포됩니다. 강제 푸시는 필요하지 않습니다.
+`gh-pages` 브랜치의 `index.html`, `style.css`, `src/`를 수정하세요. 계산·동작 원본을 수정했다면 `npm ci --cache /tmp/sajumoon-npm-cache --no-audit --no-fund`, `npm test`, `npm run build`를 실행하고 생성된 `app.js`와 함께 커밋·푸시하세요. 자동으로 다시 배포되며 강제 푸시는 필요하지 않습니다.
 
 ## 로컬 확인
 
@@ -22,4 +22,4 @@ python3 -m http.server 3000 --bind 0.0.0.0 --directory /workspace/Saju_moon
 node --check /workspace/Saju_moon/app.js
 ```
 
-메뉴 이동, 모바일 화면, 생년월일 필수 입력, 확인창 열기와 닫기를 확인하세요. 입력값은 서버로 전송하거나 저장하지 않습니다. 실제 사주 계산 기능은 구현되어 있지 않습니다.
+메뉴 이동, 모바일 화면, 양력·음력·윤달 입력, 시간 미상, 계산 결과와 풀이 주제 전환, 결과 복사를 확인하세요. 입력값은 서버로 전송하거나 저장하지 않습니다. 사주 기둥 계산과 전통 상징에 따른 기본 풀이를 제공하며, 상세한 계산 기준과 한계는 README 및 결과창에 표시합니다.
