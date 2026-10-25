@@ -1,7 +1,7 @@
 const path=require('node:path');
 const {korean,ELEMENTS}=require('../src/saju.cjs');
 const PRODUCT=require('./product.cjs');
-const THEME=Object.freeze({brand:'월홍',ink:'#44374f',muted:'#81738d',pink:'#f3d8e3',lavender:'#e6ddf5',paper:'#fcf9fc',plum:'#292137',gold:'#c9ae89',pearl:['#f5d9eb','#ded4f6','#c8e6e0','#faf1d9','#dac6ed']});
+const THEME=Object.freeze({brand:'사주문',ink:'#44374f',muted:'#81738d',pink:'#f3d8e3',lavender:'#e6ddf5',paper:'#fcf9fc',plum:'#292137',gold:'#c9ae89',pearl:['#f5d9eb','#ded4f6','#c8e6e0','#faf1d9','#dac6ed']});
 function fonts(doc){
  const root=path.join(__dirname,'../assets/fonts');
  doc.registerFont('Body',path.join(root,'NanumGothic-Regular.ttf'));
@@ -48,7 +48,7 @@ function frame(doc,page){
  doc.moveTo(50,72).lineTo(545,72).lineWidth(.5).strokeColor('#e6dce9').stroke();
  flower(doc,531,122,11);star(doc,505,107,3);
  doc.moveTo(50,764).lineTo(545,764).lineWidth(.5).strokeColor('#dfd4e5').stroke();
- text(doc,'월홍 · 나를 읽는 다정한 시간',50,779,8,THEME.muted,{width:300});
+ text(doc,'사주문 · 나를 읽는 다정한 시간',50,779,8,THEME.muted,{width:300});
  text(doc,`${String(page).padStart(2,'0')}  /  15`,470,779,8,THEME.muted,{width:75,align:'right'});
 }
 function card(doc,paragraph,y,index,highlight=false){
@@ -71,14 +71,14 @@ function cover(doc,input,row){
  text(doc,THEME.brand,58,52,27,'#f7e8ef',{font:'Title',width:130});
  text(doc,'MOONLIGHT EDITION\nPERSONAL SAJU REPORT',300,59,7.4,'#cbbbd9',{width:235,align:'right',characterSpacing:1.5,lineGap:5});
  text(doc,'당신이라는 우주를\n읽는 시간',58,116,31,'#fff2f4',{font:'Serif',width:480,lineGap:12});
- text(doc,`${input.name||'방문자'}님을 위한 월홍 사주 리포트`,59,220,11,'#d9c6e3',{width:470,lineGap:4});
+ text(doc,`${input.name||'방문자'}님을 위한 사주문 사주 리포트`,59,220,11,'#d9c6e3',{width:470,lineGap:4});
  medallion(doc,298,408,136);
  text(doc,row[2][0],62,567,9.2,'#ddcfe3',{width:470,lineGap:5});
  doc.roundedRect(58,636,479,64,8).fill('#362b44');
  text(doc,row[2][1],76,649,9.4,'#f4e5ed',{width:440,lineGap:5});
  text(doc,row[2][2],60,722,8.5,'#d3bfdc',{width:475,lineGap:5});
  star(doc,298,782,4,'#dcc4ae');
- text(doc,'W O L H O N G',60,779,7.5,'#bfa5c9',{width:180});
+ text(doc,'S A J U M O O N',60,779,7.5,'#bfa5c9',{width:180});
  text(doc,'01 / 15',440,779,8,'#bfa5c9',{width:95,align:'right'});
 }
 function pillarCards(doc,result,y){
