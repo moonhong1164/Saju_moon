@@ -2,7 +2,7 @@ const fs=require('node:fs');const path=require('node:path');
 const {createStore}=require('./store.cjs');const {createApp}=require('./app.cjs');
 const dir=process.env.DATA_DIR||path.join(__dirname,'../.data');
 fs.mkdirSync(dir,{recursive:true,mode:0o700});
-const store=createStore(path.join(dir,'orders.sqlite'));
+const store=createStore(path.join(dir,'orders.sqlite'),{encryptionKey:process.env.ORDER_DATA_KEY});
 store.cleanup();
 const {app,processOne,config}=createApp({store});
 const host=config.test?'127.0.0.1':'0.0.0.0',port=Number(process.env.PORT||3000);

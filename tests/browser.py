@@ -10,7 +10,7 @@ with sync_playwright() as p:
         page = context.new_page()
         errors, requests = [], []
         page.on('pageerror', lambda e: errors.append(str(e)))
-        page.on('request', lambda r: requests.append((r.method,r.url)))
+        page.on('request', lambda r: requests.append((r.method,r.url,r.post_data)))
         assert page.goto(url).status == 200
         page.locator('[data-topic="일과 재물"]').click()
         assert page.locator('#topic').input_value() == '일과 재물'
@@ -74,8 +74,11 @@ with sync_playwright() as p:
         if zone == 'Asia/Seoul':
             page.screenshot(path='/tmp/saju-calculator-desktop.png',full_page=True)
         assert not errors, errors
-        assert all(method == 'GET' for method,_ in requests)
-        assert all(u.startswith(url) for _,u in requests)
+        assert all(method == 'GET' or (method == 'POST' and u.endswith('/api/events')) for method,u,_ in requests)
+        import json
+        for method,u,body in requests:
+            if method == 'POST': assert set(json.loads(body)) == {'page','source','campaign'}
+        assert all(u.startswith(url) for _,u,_ in requests)
         context.close()
         print(f'PASS {zone}: solar/leap lunar, validation, pillars, unknown time, boundary, topics, clipboard, XSS escaping, mobile overflow, local-only requests, no JS errors')
     browser.close()

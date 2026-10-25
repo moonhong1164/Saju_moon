@@ -35,8 +35,8 @@ function sections(input){
  ];
  return {result:r,rows};
 }
-async function createPdf(input){
- const report=sections(input);
+async function createPdf(input,preparedReport){
+ const report=preparedReport||sections(input);
  if(report.rows.length!==PRODUCT.pages)throw new Error('Report page configuration mismatch');
  return new Promise((resolve,reject)=>{
   const doc=new PDFDocument({autoFirstPage:false,size:'A4',margin:44,bufferPages:true,info:{Title:'사주문 · 나를 읽는 사주 리포트',Author:'사주문'}});

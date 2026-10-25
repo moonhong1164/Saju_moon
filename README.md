@@ -15,7 +15,7 @@
 
 ## 유료 PDF 상품 (19,000원 · 15쪽)
 
-상품 화면과 샘플 PDF, 토스 결제 승인/Resend 메일 어댑터 및 Node 서버를 구현했습니다. 실제 결제·메일 서비스는 계정 연동 전까지 비활성화되어 있습니다. 실행·호스팅·발송·정책 확정 절차는 [COMMERCE_SETUP.md](COMMERCE_SETUP.md)를 참고하세요. 샘플은 [sample-report.pdf](sample-report.pdf)입니다.
+상품 화면과 샘플 PDF, 토스 결제 승인/Resend 메일 어댑터 및 Node 서버를 구현했습니다. 실제 결제·메일 서비스는 계정 연동 전까지 비활성화되어 있습니다. 관리자 주문·고객·문의·환불 화면, 유입 집계와 수익 계산, 잠금/결제 후 웹 리포트 및 선택적 AI 해설을 추가했습니다. 기능·운영 안내는 [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md)에 있습니다. 실행·호스팅·발송·정책 확정 절차는 [COMMERCE_SETUP.md](COMMERCE_SETUP.md)를 참고하세요. 샘플은 [sample-report.pdf](sample-report.pdf)입니다.
 
 ## 무료 정적 페이지 실행
 

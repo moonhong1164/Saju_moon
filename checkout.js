@@ -1,7 +1,7 @@
 const $=selector=>document.querySelector(selector);
 const error=$('#purchase-error'),payButton=$('#pay-button');
 let config=null,active=null,confirmation=null,pollTimer=null;
-const statusText={pending_payment:'아직 결제 승인이 완료되지 않았습니다.',paid:'결제가 확인되었습니다. 보고서 제작을 기다리고 있습니다.',processing:'15쪽 PDF를 제작하고 이메일 발송을 요청하고 있습니다.',sent:'메일 서비스에 PDF 발송이 접수되었습니다. 수신함과 스팸함을 확인해 주세요. 아래에서 PDF를 바로 내려받을 수도 있습니다.',delivery_failed:'자동 제작·메일 발송을 완료하지 못했습니다. PDF가 준비되었다면 내려받을 수 있습니다. 주문번호와 함께 판매자에게 문의해 주세요.'};
+const statusText={refund_requested:'환불 검토를 요청했습니다. 운영자의 답변을 기다려 주세요.',refund_processing:'결제사 환불 상태를 확인 중입니다.',refunded:'19,000원 전액 환불 처리가 확인되었습니다. 상세 리포트 접근은 종료됩니다.',pending_payment:'아직 결제 승인이 완료되지 않았습니다.',paid:'결제가 확인되었습니다. 보고서 제작을 기다리고 있습니다.',processing:'15쪽 PDF를 제작하고 이메일 발송을 요청하고 있습니다.',sent:'메일 서비스에 PDF 발송이 접수되었습니다. 수신함과 스팸함을 확인해 주세요. 아래에서 PDF를 바로 내려받을 수도 있습니다.',delivery_failed:'자동 제작·메일 발송을 완료하지 못했습니다. PDF가 준비되었다면 내려받을 수 있습니다. 주문번호와 함께 판매자에게 문의해 주세요.'};
 async function api(url,body,token){
  const response=await fetch(url,{method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{})},body:body?JSON.stringify(body):undefined});
  const data=await response.json();if(!response.ok)throw new Error(data.error||'요청을 완료하지 못했습니다.');return data;
@@ -19,6 +19,7 @@ async function refresh(){
   $('#order-error').textContent='';
   $('#order-status').textContent=data.demo&&data.status==='sent'?'모의 주문으로 PDF를 생성했습니다. 실제 결제나 이메일 발송은 하지 않았습니다.':statusText[data.status]||'주문 상태를 확인해 주세요.';
   $('#download-report').hidden=!data.downloadReady;
+  $('#open-report').hidden=!data.reportReady;
   clearTimeout(pollTimer);
   if(['paid','processing'].includes(data.status))pollTimer=setTimeout(refresh,4000);
  }catch(e){$('#order-error').textContent=e.message;}
@@ -50,7 +51,8 @@ $('#purchase-form').addEventListener('submit',async event=>{
  const form=new FormData(event.currentTarget);
  const input=Object.fromEntries(['name','email','date','calendar'].map(k=>[k,String(form.get(k)||'').trim()]));
  input.time=$('#buyer-unknown').checked?'':form.get('time');
- for(const key of ['agreeTerms','agreePrivacy','agreeProduction'])input[key]=form.has(key);
+ for(const key of ['agreeTerms','agreePrivacy','agreeProduction','agreeAi'])input[key]=form.has(key);
+ try{const a=JSON.parse(sessionStorage.getItem('sajumoon-attribution')||'{}');input.source=a.source;input.campaign=a.campaign;}catch{}
  const order=await api('/api/orders',input);
  persist({id:order.id,token:order.token});
  if(config.demo){
@@ -71,6 +73,7 @@ async function init(){
  try{
   config=await api('/api/config');
   $('#service-status').textContent=config.demo?'로컬 체험 모드입니다. 실제로 돈을 받거나 이메일을 보내지 않습니다.':config.enabled?(config.test?'결제사 테스트 모드입니다. 실제 청구되지 않는 테스트 결제입니다. 테스트 주문의 보고서 이메일은 발송될 수 있습니다.':'결제 승인 후 PDF 제작과 이메일 발송을 시작합니다.'):'판매 준비 중입니다. 샘플 PDF를 먼저 확인해 주세요. 실제 결제는 아직 열리지 않았습니다.';
+  if(config.reportEngine==='ai'){$('#report-method-note').textContent='검증된 명식·오행에 AI 해설을 연결합니다. 전문가 개별 감정·대운·용신·미래 사건 예측은 포함하지 않습니다. 공개 샘플은 기본 해설의 구성·디자인 예시입니다.';$('#ai-consent-label').hidden=false;$('#agree-ai').required=true;}
   if(config.seller.name)$('#seller-info').textContent=`판매자: ${config.seller.name} / 사업자번호: ${config.seller.businessId}\n주소: ${config.seller.address}\n문의: ${config.seller.contact}`;
   if(config.enabled&&!config.demo){await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://js.tosspayments.com/v2/standard';script.onload=resolve;script.onerror=()=>reject(new Error('결제 모듈을 불러오지 못했습니다.'));document.head.append(script);});}
   payButton.disabled=!config.enabled;
@@ -86,3 +89,24 @@ async function init(){
  }else if(active){showOrder();if(confirmation)await confirm();else await refresh();}
 }
 init();
+
+function textNode(tag,text){const n=document.createElement(tag);n.textContent=text;return n;}
+$('#open-report').addEventListener('click',async()=>{
+ try{
+  const report=await api('/api/orders/'+active.id+'/report',null,active.token);
+  if(!report.ready){$('#order-error').textContent='아직 상세 리포트를 제작하고 있습니다.';return;}
+  $('#web-report-kind').textContent=report.kind==='ai'?'계산값 기반 AI 해설 · 참고용 리포트':'계산값 기반 기본 해설 · 참고용 리포트';
+  $('#web-chapters').replaceChildren();
+  for(const c of report.chapters){const section=document.createElement('details');section.className='web-chapter';const summary=textNode('summary',`${String(c.page).padStart(2,'0')}  ${c.title}`);section.append(summary,textNode('h3',c.subtitle));for(const p of c.paragraphs)section.append(textNode('p',p));$('#web-chapters').append(section);}
+  $('#web-report').showModal();
+ }catch(e){$('#order-error').textContent=e.message;}
+});
+$('#close-web-report').addEventListener('click',()=>$('#web-report').close());
+async function loadTickets(){
+ if(!active)return;
+ try{const data=await api('/api/orders/'+active.id+'/tickets',null,active.token);$('#customer-tickets').replaceChildren();for(const t of data.tickets){const card=document.createElement('article');card.append(textNode('p',t.message),textNode('small',t.reply?'운영자 답변: '+t.reply:'답변 대기 중'));$('#customer-tickets').append(card);}}
+ catch(e){$('#support-status').textContent=e.message;}
+}
+$('#refresh-tickets').addEventListener('click',loadTickets);
+$('#support-form').addEventListener('submit',async e=>{e.preventDefault();try{await api('/api/orders/'+active.id+'/tickets',{message:$('#support-message').value},active.token);$('#support-message').value='';$('#support-status').textContent='문의를 접수했습니다. 이 화면에서 답변을 확인해 주세요.';await loadTickets();}catch(error){$('#support-status').textContent=error.message;}});
+$('#refund-form').addEventListener('submit',async e=>{e.preventDefault();try{await api('/api/orders/'+active.id+'/refund-request',{reason:$('#refund-reason').value},active.token);$('#support-status').textContent='환불 검토를 요청했습니다. 자동 환불 완료를 의미하지 않으며, 운영자 검토 후 안내합니다.';await refresh();await loadTickets();}catch(error){$('#support-status').textContent=error.message;}});
