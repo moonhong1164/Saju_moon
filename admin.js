@@ -11,7 +11,7 @@ function renderOrders(){
  const query=$('#order-search').value.toLowerCase();const list=$('#order-list');list.replaceChildren();
  const orders=data.orders.filter(o=>[o.id,o.name,o.email].some(v=>v?.toLowerCase().includes(query)));
  if(!orders.length){const row=el('tr');const td=cell(row,'아직 해당 주문이 없습니다.');td.colSpan=5;list.append(row);return;}
- for(const o of orders){const row=el('tr'),who=cell(row,o.name||'방문자');who.append(el('small',o.email),el('small',o.id));cell(row,o.refundState==='processing'?'환불 처리 중':labels[o.refundState]||labels[o.status]||o.status);cell(row,`${o.source} / ${o.campaign}`);cell(row,(o.reportKind==='ai'?'AI 해설':'기본 해설')+(o.hasPdf?' · PDF 준비':' · 대기'));cell(row,'').append(button('상세 보기',()=>openOrder(o.id)));list.append(row);}
+ for(const o of orders){const row=el('tr'),who=cell(row,o.name||'방문자');who.append(el('small',o.email),el('small',o.id));cell(row,o.refundState==='processing'?'환불 처리 중':labels[o.refundState]||labels[o.status]||o.status);cell(row,`${o.source} / ${o.campaign}`);cell(row,o.status==='refunded'?'환불로 열람 종료':(o.reportKind==='ai'?'AI 해설':'기본 해설')+(o.hasPdf?' · PDF 준비':' · 대기'));cell(row,'').append(button('상세 보기',()=>openOrder(o.id)));list.append(row);}
 }
 function render(){
  $('#metric-cards').replaceChildren();

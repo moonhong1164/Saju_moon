@@ -18,7 +18,10 @@ test('report is locked before payment, same prepared content opens after payment
  assert.equal((await fetch(f.base+url+'/pdf',{headers:{Authorization:'Bearer '+o.token}})).status,404);
  await f.req(url+'/confirm',{amount:19000,paymentKey:'local-demo'},o.token);await f.processOne();
  const report=await f.req(url+'/report',null,o.token);assert.equal(report.data.chapters.length,15);assert.equal(report.data.kind,'rules');assert.ok(report.data.chapters[2].paragraphs[0].includes('신사'));
+ await f.req(url+'/refund-request',{reason:'고객의 환불 요청 확인'},o.token);
+ assert.equal(f.store.summary('demo').totals.openTickets,1);
  await f.req('/api/admin/orders/'+o.id+'/refund',{reason:'고객의 환불 요청 확인'});
+ assert.equal(f.store.summary('demo').totals.openTickets,0);
  assert.equal((await f.req(url+'/report',null,o.token)).response.status,402);
  assert.equal((await f.req(url,null,o.token)).data.downloadReady,false);
  assert.equal((await f.req('/api/admin/summary')).data.totals.net,0);
@@ -45,6 +48,7 @@ test('refund request pauses queued generation, decline resumes, explicit resend 
  assert.equal(await f.processOne(),false);
  await f.req('/api/admin/orders/'+o.id+'/decline-refund',{message:'고객과 협의해 원래 주문 제작을 진행합니다.'});
  assert.equal(await f.processOne(),true);
+ assert.equal(f.store.summary('demo').totals.openTickets,0);
  await f.req('/api/admin/orders/'+o.id+'/resend',{});assert.equal(f.store.get(o.id).mail_epoch,1);assert.equal(await f.processOne(),true);
 });
 test('anonymous traffic, paid conversion, refunds and cost estimates agree',async t=>{
