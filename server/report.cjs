@@ -1,9 +1,7 @@
 const PDFDocument=require('pdfkit');
-const path=require('node:path');
 const {calculate,korean,element,STEMS}=require('../src/saju.cjs');
 const {reading}=require('../src/readings.cjs');
 const PRODUCT=require('./product.cjs');
-const font=path.join(__dirname,'../assets/fonts/NanumGothic-Regular.ttf');
 const meanings={목:['성장과 연결','새로운 시도를 시작하거나 배우는 과정','작은 목표를 정하고 기록하기'],화:['표현과 교류','경험과 생각을 밖으로 나누는 과정','집중과 휴식의 리듬 살피기'],토:['유지와 조율','일상의 기반과 관계를 돌보는 과정','맡은 일의 범위를 분명히 하기'],금:['정리와 기준','중요한 것을 가려내고 마무리하는 과정','완료 기준과 기한을 정하기'],수:['관찰과 탐색','정보를 모으고 다양한 길을 찾는 과정','생각한 것을 한 가지 행동으로 옮기기']};
 function tenGod(master,target){
  const a=STEMS.indexOf(master),b=STEMS.indexOf(target);
@@ -19,7 +17,7 @@ function sections(input){
  const uncertain=r.boundary?'절입 경계에 해당해 년주 또는 월주의 후보가 둘입니다. 확정되지 않은 기둥은 집계에서 제외했습니다.':!r.time?'출생 시간이 없어 시주를 제외했습니다. 추가 정보가 생기면 다시 계산해 주세요.':'입력한 한국 날짜와 시각을 기준으로 네 기둥을 계산했습니다.';
  const stemRoles=Object.entries(r.pillars).filter(([key,v])=>key!=='day'&&v.length===1).map(([key,v])=>`${{year:'년간',month:'월간',time:'시간'}[key]} ${korean(v[0][0])}: ${tenGod(r.dayMaster,v[0][0])}`);
  const rows=[
- ['당신이라는 우주를 읽는 시간',`${name}님을 위한 사주문 상세 리포트`,['태어난 순간을 단정적인 운명의 답으로 보기보다, 나를 돌아보는 또 하나의 언어로 만납니다. 이 보고서는 실제 입력값으로 계산한 사주 기둥에 전통적인 상징 설명과 실천 질문을 연결합니다.',`양력 ${r.solarDate} / ${r.time||'시간 미상'}\n음력 ${r.lunarDate}${r.lunar.intercalation?' 윤달':' 평달'}\n일간 ${korean(r.dayMaster)} · ${r.dayElement}`,`총 ${PRODUCT.pages}쪽 · 상품가 ${PRODUCT.amount.toLocaleString('ko-KR')}원\n${input.sample?'내용 확인용 샘플 · 실제 구매 보고서가 아닙니다.':'개인 열람용 보고서 · 입력 정보가 다른 경우 판매자에게 문의해 주세요.'}`]],
+ ['당신이라는 우주를 읽는 시간',`${name}님을 위한 월홍 사주 리포트`,['태어난 순간을 단정적인 운명의 답으로 보기보다, 나를 돌아보는 또 하나의 언어로 만납니다. 이 보고서는 실제 입력값으로 계산한 사주 기둥에 전통적인 상징 설명과 실천 질문을 연결합니다.',`양력 ${r.solarDate} / ${r.time||'시간 미상'}\n음력 ${r.lunarDate}${r.lunar.intercalation?' 윤달':' 평달'}\n일간 ${korean(r.dayMaster)} · ${r.dayElement}`,`총 ${PRODUCT.pages}쪽 · 상품가 ${PRODUCT.amount.toLocaleString('ko-KR')}원\n${input.sample?'내용 확인용 샘플 · 실제 구매 보고서가 아닙니다.':'개인 열람용 보고서 · 입력 정보가 다른 경우 판매자에게 문의해 주세요.'}`]],
  ['보고서를 읽기 전에','내 경험이 언제나 먼저입니다',['앞부분에서는 입력 정보와 계산 결과를 확인하고, 중간에서는 일간·오행·관계와 일의 상징을 살펴봅니다. 뒷부분에서는 이를 일상의 관찰과 실천으로 옮길 수 있도록 질문을 정리했습니다.','문장이 자신의 경험과 맞지 않는다면 억지로 맞출 필요가 없습니다. 같은 생년월일이라도 환경·관계·선택에 따라 삶은 달라집니다. 해당하는 점과 해당하지 않는 점을 나누어 표시해 보세요.','이 보고서는 고정된 규칙으로 구성한 참고용 해설입니다. 전문가의 개별 상담이나 생성형 AI 상담, 과학적 성격 검사, 미래 사건 예측을 제공하지 않습니다. 대운·용신·신강신약에 관한 정밀 감정도 포함하지 않습니다.']],
  ['나의 사주 명식','태어난 순간을 네 기둥으로 살펴봅니다',[pillars.join('\n'),`년주는 입춘, 월주는 12절의 절입 시각으로 구분합니다. 일주는 한국 날짜의 자정에 바뀌며 시주는 해당 날짜의 일간과 두 시간 간격의 지지를 연결합니다. ${uncertain}`,'년·월·일·시는 전통적으로 서로 다른 삶의 배경을 상징합니다. 그러나 특정 기둥만으로 가족·배우자·자녀의 성격이나 사건을 판단하지 않습니다. 우선 각 글자를 확인하고, 이 보고서에서 쓰는 기준을 이해하는 데 활용해 주세요.']],
  ['일간으로 보는 나의 중심',general.title,[general.body,`일간은 일주의 첫 글자인 ${korean(r.dayMaster)}입니다. 이 보고서에서는 ${r.dayElement}의 상징을 중심으로, ${traits[1]}을 돌아봅니다. 이 한 글자가 모든 성격을 설명하는 것은 아닙니다.`,general.practice]],
@@ -38,31 +36,13 @@ function sections(input){
  return {result:r,rows};
 }
 async function createPdf(input){
- const {rows}=sections(input);
- if(rows.length!==PRODUCT.pages)throw new Error('Report page configuration mismatch');
+ const report=sections(input);
+ if(report.rows.length!==PRODUCT.pages)throw new Error('Report page configuration mismatch');
  return new Promise((resolve,reject)=>{
- const doc=new PDFDocument({autoFirstPage:false,size:'A4',margin:52,bufferPages:true,info:{Title:'사주문 상세 풀이 리포트',Author:'사주문'}});
- const chunks=[];doc.on('data',c=>chunks.push(c));doc.on('error',reject);doc.on('end',()=>resolve(Buffer.concat(chunks)));
- doc.registerFont('Korean',font);doc.font('Korean');
- rows.forEach(([title,subtitle,paragraphs],i)=>{
-  doc.addPage();doc.rect(0,0,doc.page.width,doc.page.height).fill('#f5f2e9');
-  doc.fillColor('#ad503b').fontSize(10).text(`사주문  /  ${String(i+1).padStart(2,'0')}`,52,45);
-  doc.fillColor('#272e28').fontSize(i===0?28:23).text(title,52,98,{width:490});
-  doc.fontSize(13).fillColor('#6b745f').text(subtitle,52,158,{width:490,lineGap:6});
-  let y=218;
-  paragraphs.forEach((paragraph,j)=>{
-    paragraph=korean(paragraph);
-    doc.fontSize(12).fillColor('#394333');
-    const height=doc.heightOfString(paragraph,{width:490,lineGap:7});
-    if(y+height>735)throw new Error(`Report text exceeds page ${i+1}`);
-    doc.text(paragraph,52,y,{width:490,lineGap:7});y+=height+26;
-  });
-  doc.moveTo(52,755).lineTo(543,755).strokeColor('#cdd2c2').stroke();
-  doc.fillColor('#6b745f').fontSize(9).text('전통 상징을 통한 자기 이해 · 참고용 해설',52,770,{width:400,lineBreak:false});
-  doc.text(`${i+1} / ${PRODUCT.pages}`,495,770,{lineBreak:false});
- });
- if(doc.bufferedPageRange().count!==15)throw new Error('Report must have 15 pages');
- doc.end();
+  const doc=new PDFDocument({autoFirstPage:false,size:'A4',margin:44,bufferPages:true,info:{Title:'월홍 · 나를 읽는 사주 리포트',Author:'월홍 · 사주문'}});
+  const chunks=[];doc.on('data',c=>chunks.push(c));doc.on('error',reject);doc.on('end',()=>resolve(Buffer.concat(chunks)));
+  require('./report-design.cjs').render(doc,input,report);
+  doc.end();
  });
 }
 module.exports={createPdf,sections,tenGod};
