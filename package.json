@@ -6,8 +6,23 @@
   "scripts": {
     "build": "esbuild src/app.js --bundle --minify --target=es2020 --outfile=app.js --legal-comments=eof",
     "test": "node --test tests/*.test.cjs",
-    "start": "python3 -m http.server 3000 --bind 0.0.0.0"
+    "start": "node --env-file-if-exists=.env server/start.cjs",
+    "start:static": "python3 -m http.server 3000 --bind 0.0.0.0",
+    "demo": "node server/demo.cjs",
+    "sample": "node scripts/generate-sample.cjs"
   },
-  "dependencies": {"korean-lunar-calendar": "0.4.0", "lunar-javascript": "1.7.7"},
-  "devDependencies": {"esbuild": "0.28.2"}
+  "dependencies": {
+    "express": "5.1.0",
+    "express-rate-limit": "8.7.1",
+    "helmet": "8.1.0",
+    "korean-lunar-calendar": "0.4.0",
+    "lunar-javascript": "1.7.7",
+    "pdfkit": "0.17.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  },
+  "engines": {
+    "node": ">=24.0.0 <25"
+  }
 }

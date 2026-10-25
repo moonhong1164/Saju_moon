@@ -96,3 +96,9 @@ document.querySelector('#copy-result').addEventListener('click',async()=>{
  try { await navigator.clipboard.writeText(text); document.querySelector('#copy-status').textContent='결과를 복사했습니다.'; }
  catch { document.querySelector('#copy-status').textContent='이 브라우저에서 복사가 허용되지 않았습니다. 결과 글을 선택해 복사해 주세요.'; }
 });
+
+document.querySelector('#premium-from-result').addEventListener('click',()=>{
+ if(!current)return;
+ const f=new FormData(form);
+ sessionStorage.setItem('sajumoon-prefill',JSON.stringify({name:f.get('name')||'',date:f.get('birth'),calendar:f.get('calendar'),time:unknown.checked?'':f.get('time')}));
+});
