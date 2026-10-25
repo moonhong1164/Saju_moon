@@ -71,7 +71,7 @@ function cover(doc,input,row){
  text(doc,THEME.brand,58,52,27,'#f7e8ef',{font:'Title',width:130});
  text(doc,'MOONLIGHT EDITION\nPERSONAL SAJU REPORT',300,59,7.4,'#cbbbd9',{width:235,align:'right',characterSpacing:1.5,lineGap:5});
  text(doc,'당신이라는 우주를\n읽는 시간',58,116,31,'#fff2f4',{font:'Serif',width:480,lineGap:12});
- text(doc,`${input.name||'방문자'}님을 위한 사주문 사주 리포트`,59,220,11,'#d9c6e3',{width:470,lineGap:4});
+ text(doc,`${input.name||'방문자'}님을 위한 프라이빗 사주 리포트`,59,220,11,'#d9c6e3',{width:470,lineGap:4});
  medallion(doc,298,408,136);
  text(doc,row[2][0],62,567,9.2,'#ddcfe3',{width:470,lineGap:5});
  doc.roundedRect(58,636,479,64,8).fill('#362b44');
