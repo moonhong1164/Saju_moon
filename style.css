@@ -4,3 +4,5 @@
 
 .premium-result-link{display:block;padding:18px;margin:0 0 20px;background:#e8ebdf;font-size:12px;line-height:1.8;text-decoration:underline}
 [hidden]{display:none!important}
+
+.nav-admin-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 13px;border:1px solid #b8a2c2;border-radius:6px;color:#694c78;font-size:12px;white-space:nowrap}@media(max-width:640px){.header>nav{gap:12px}.header .nav-admin-link{display:inline-flex;font-size:11px;padding:8px 10px}.nav-cta span{margin-left:10px}}

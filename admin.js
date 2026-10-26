@@ -53,7 +53,23 @@ $('#admin-login').addEventListener('submit',async e=>{e.preventDefault();$('#log
 $('#admin-setup').addEventListener('submit',async e=>{e.preventDefault();$('#admin-error').textContent='';if($('#setup-password').value!==$('#setup-password-confirm').value){$('#admin-error').textContent='비밀번호 확인이 일치하지 않습니다.';return;}$('#setup-button').disabled=true;try{await signedIn(await api('auth/setup',{username:$('#setup-username').value.trim(),password:$('#setup-password').value,setupToken:$('#setup-token').value}));}catch(error){$('#admin-error').textContent=error.message;}finally{$('#setup-button').disabled=false;}});
 $('#logout').addEventListener('click',async()=>{try{await api('auth/logout',{});lock();$('#login-note').textContent='로그아웃했습니다. 다시 로그인해 주세요.';}catch(error){$('#admin-error').textContent=error.message;}});
 $('#password-form').addEventListener('submit',async e=>{e.preventDefault();const status=$('#password-status');if($('#new-password').value!==$('#new-password-confirm').value){status.textContent='새 비밀번호 확인이 일치하지 않습니다.';return;}try{const session=await api('auth/password',{currentPassword:$('#current-password').value,newPassword:$('#new-password').value});csrf=session.csrf;username=session.username;e.target.reset();status.textContent='비밀번호를 변경했습니다. 다른 로그인은 종료되었습니다.';}catch(error){status.textContent=error.message;}});
-async function initialize(){try{const session=await api('auth/session');$('#admin-login').hidden=false;$('#account-setup').hidden=true;$('#connection-help').hidden=true;$('#login-button').disabled=false;if(session.configurationIssue){lock();$('#admin-login').hidden=true;$('#account-setup').hidden=true;$('#connection-help').hidden=false;$('#login-note').textContent=session.configurationIssue;return;}if(session.serviceOrigin&&new URL(session.serviceOrigin).origin!==location.origin){lock();$('#admin-login').hidden=true;$('#account-setup').hidden=true;$('#connection-help').hidden=false;$('#login-note').textContent='서버의 PUBLIC_BASE_URL을 현재 접속한 서버 주소로 맞춰 주세요.';return;}$('#login-note').textContent='아이디와 비밀번호로 로그인해 주세요.';if(session.authenticated){await signedIn(session);return;}lock();if(session.setupRequired){$('#account-setup').hidden=false;$('#admin-login').hidden=true;$('#login-note').textContent='아직 관리자 계정이 없습니다. 먼저 계정을 만들어 주세요.';$('#setup-token-field').hidden=!!session.localSetup;$('#setup-token').required=!session.localSetup;}}catch{lock();$('#admin-login').hidden=true;$('#account-setup').hidden=true;$('#connection-help').hidden=false;$('#login-note').textContent='로그인 서버에 연결되지 않았습니다.';}}
+function showConnectionHelp(message){
+ lock();$('#admin-login').hidden=false;$('#account-setup').hidden=true;$('#connection-help').hidden=false;
+ $('#admin-username').disabled=true;$('#admin-password').disabled=true;$('#login-button').disabled=true;
+ $('#login-note').textContent=message;
+}
+async function initialize(){
+ try{
+  const session=await api('auth/session');$('#admin-login').hidden=false;$('#account-setup').hidden=true;$('#connection-help').hidden=true;
+  if(session.configurationIssue){showConnectionHelp(session.configurationIssue);return;}
+  if(session.serviceOrigin&&new URL(session.serviceOrigin).origin!==location.origin){showConnectionHelp('서버의 PUBLIC_BASE_URL을 현재 접속한 서버 주소로 맞춰 주세요.');return;}
+  $('#admin-username').disabled=false;$('#admin-password').disabled=false;$('#login-button').disabled=false;
+  $('#login-note').textContent='아이디와 비밀번호로 로그인해 주세요.';
+  if(session.authenticated){await signedIn(session);return;}
+  lock();
+  if(session.setupRequired){$('#account-setup').hidden=false;$('#admin-login').hidden=true;$('#login-note').textContent='아직 관리자 계정이 없습니다. 먼저 계정을 만들어 주세요.';$('#setup-token-field').hidden=!!session.localSetup;$('#setup-token').required=!session.localSetup;}
+ }catch{showConnectionHelp('로그인 화면 미리보기입니다. 서버 미연결로 실제 로그인은 아직 사용할 수 없습니다. 아래에서 관리자 화면 구성을 확인해 주세요.');}
+}
 $('#refresh-admin').addEventListener('click',initialize);$('#order-search').addEventListener('input',()=>{if(data)renderOrders();});
 $('#close-detail').addEventListener('click',()=>$('#order-detail').close());
 $('#cost-form').addEventListener('submit',async e=>{e.preventDefault();try{const f=new FormData(e.currentTarget);await api('costs',Object.fromEntries([...f].map(([k,v])=>[k,Number(v)])));await load();}catch(error){$('#admin-error').textContent=error.message;}});

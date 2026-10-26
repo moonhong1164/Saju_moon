@@ -50,7 +50,8 @@ with sync_playwright() as p:
  page.route('**/api/admin/**',lambda r:r.fulfill(status=404,body='Not found',content_type='text/html'))
  page.reload()
  expect(page.locator('#connection-help')).to_be_visible()
- expect(page.locator('#admin-login')).to_be_hidden()
+ expect(page.locator('#admin-login')).to_be_visible()
+ expect(page.locator('#login-button')).to_be_disabled()
  expect(page.locator('#dashboard')).to_be_hidden()
  expect(page.locator('#connection-help')).to_contain_text('로그인 서버 연결')
  assert not errors,errors

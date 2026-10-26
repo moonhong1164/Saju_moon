@@ -99,7 +99,7 @@ function createApp({store,env=process.env,pay=confirmToss,mail=sendReport,cancel
   }catch{if(order)store.failed(order.id,order.attempts,stage);return false;}finally{busy=false;}
  }
  registerOperations(app,{store,config,mode,env,auth,cancel});
- for(const filename of ['setup.html','admin.html','admin.js','admin.css','traffic.js','policies.html','policies.js','index.html','style.css','app.js','checkout.html','checkout.js','checkout.css','sample-report.pdf','THIRD_PARTY_NOTICES.txt']){
+ for(const filename of ['admin-preview.html','admin-preview.js','setup.html','admin.html','admin.js','admin.css','traffic.js','policies.html','policies.js','index.html','style.css','app.js','checkout.html','checkout.js','checkout.css','sample-report.pdf','THIRD_PARTY_NOTICES.txt']){
   app.get(filename==='index.html'?['/','/index.html']:`/${filename}`,(_req,res)=>res.sendFile(path.join(root,filename)));
  }
  app.use((error,_req,res,_next)=>res.status(error.type==='entity.too.large'?413:400).json({error:'요청 내용을 확인해 주세요.'}));
