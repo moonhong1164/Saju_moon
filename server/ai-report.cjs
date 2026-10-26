@@ -19,7 +19,6 @@ async function generateAiReport(input,{key,model,fetcher=fetch}={}){
   seen.add(chapter.page);base.rows[chapter.page-1][2]=chapter.paragraphs;
  }
  base.rows[1][2][2]='이 보고서는 검증된 명식·오행 계산값에 AI가 작성한 참고용 해설을 연결합니다. 개인 상담이나 과학적 성격 검사, 미래 사건 예측을 제공하지 않습니다. 계산 기준과 시간 미상에 따른 불확정 부분을 확인하고 자신의 실제 경험을 우선해 주세요.';
- base.rows[14][2][2]='본문의 자기 이해 해설은 AI가 작성했으며 명식·오행 계산은 별도 달력 라이브러리에서 수행했습니다. 대운·용신·합충의 전문가 감정과 사건 예측은 포함하지 않습니다. 자신의 실제 경험과 판단을 우선해 주세요.';
  base.kind='ai';return base;
 }
 module.exports={generateAiReport,PAGES};
