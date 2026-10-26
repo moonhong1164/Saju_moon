@@ -17,7 +17,9 @@ function createStore(filename,{encryptionKey}={}){
  CREATE TABLE IF NOT EXISTS ledger(id TEXT PRIMARY KEY, mode TEXT, amount INTEGER, created INTEGER, paid_at INTEGER, refunded_at INTEGER, source TEXT, campaign TEXT);
  CREATE TABLE IF NOT EXISTS tickets(id TEXT PRIMARY KEY,order_id TEXT,created INTEGER,kind TEXT,message TEXT,status TEXT DEFAULT 'open',reply TEXT);
  CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,order_id TEXT,action TEXT,created INTEGER);
- CREATE TABLE IF NOT EXISTS settings(mode TEXT PRIMARY KEY,costs TEXT);`);
+ CREATE TABLE IF NOT EXISTS settings(mode TEXT PRIMARY KEY,costs TEXT);
+ CREATE TABLE IF NOT EXISTS admin_account(id INTEGER PRIMARY KEY CHECK(id=1),username TEXT NOT NULL,password_hash TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS admin_sessions(token_hash TEXT PRIMARY KEY,username TEXT NOT NULL,csrf TEXT NOT NULL,expires INTEGER NOT NULL);`);
  db.exec(`INSERT OR IGNORE INTO ledger(id,mode,amount,created,paid_at,source,campaign) SELECT id,mode,19000,created,paid_at,source,campaign FROM orders;`);
  if(!key&&db.prepare("SELECT id FROM orders WHERE email LIKE 'enc1:%' LIMIT 1").get())throw new Error('ORDER_DATA_KEY is required for this existing encrypted database.');
  if(key){db.exec('BEGIN');try{for(const row of db.prepare('SELECT id,email,input,report_json,pdf,refund_reason FROM orders').all()){
@@ -29,6 +31,12 @@ function createStore(filename,{encryptionKey}={}){
  function audit(id,action){db.prepare('INSERT INTO audit(order_id,action,created) VALUES(?,?,?)').run(id,action,Date.now());}
  const store={
   encrypted:!!key,
+  adminAccount(){return db.prepare('SELECT username,password_hash FROM admin_account WHERE id=1').get()||null;},
+  createAdmin(username,hash){return db.prepare('INSERT OR IGNORE INTO admin_account(id,username,password_hash) VALUES(1,?,?)').run(username,hash).changes===1;},
+  saveAdminSession(token,username,csrf,expires){db.prepare('DELETE FROM admin_sessions WHERE expires<?').run(Date.now());db.prepare('INSERT INTO admin_sessions(token_hash,username,csrf,expires) VALUES(?,?,?,?)').run(token,username,csrf,expires);},
+  adminSession(token){return db.prepare('SELECT * FROM admin_sessions WHERE token_hash=? AND expires>?').get(token,Date.now())||null;},
+  deleteAdminSession(token){db.prepare('DELETE FROM admin_sessions WHERE token_hash=?').run(token);},
+  changeAdminPassword(hash){db.exec('BEGIN');try{db.prepare('UPDATE admin_account SET password_hash=? WHERE id=1').run(hash);db.exec('DELETE FROM admin_sessions');db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}},
   create(input,email,mode='live',attribution={}){
    const id='sm_'+crypto.randomUUID().replaceAll('-',''),token=crypto.randomBytes(32).toString('hex'),now=Date.now(),source=sourceValue(attribution.source),campaign=sourceValue(attribution.campaign);
    db.exec('BEGIN');try{db.prepare('INSERT INTO orders(id,token_hash,email,input,created,consent_version,mode,source,campaign,report_kind) VALUES(?,?,?,?,?,?,?,?,?,?)').run(id,hash(token),encode(email),encode(JSON.stringify(input)),now,'2026-10-26-v2',mode,source,campaign,attribution.reportEngine==='ai'?'ai':'rules');
@@ -67,7 +75,7 @@ function createStore(filename,{encryptionKey}={}){
   },
   costs(mode,value){db.prepare('INSERT INTO settings(mode,costs) VALUES(?,?) ON CONFLICT(mode) DO UPDATE SET costs=excluded.costs').run(mode,JSON.stringify(value));},
   audit(id){return db.prepare('SELECT action,created FROM audit WHERE order_id=? ORDER BY created DESC').all(id);},
-  cleanup(){const cutoff=Date.now()-30*86400000;db.prepare('DELETE FROM tickets WHERE order_id IN (SELECT id FROM orders WHERE created<?)').run(cutoff);db.prepare('DELETE FROM orders WHERE created<?').run(cutoff);db.prepare('DELETE FROM traffic WHERE day<?').run(todayKst(new Date(cutoff)));db.prepare('DELETE FROM audit WHERE created<?').run(Date.now()-5*365*86400000);db.prepare('DELETE FROM ledger WHERE created<?').run(Date.now()-5*365*86400000);},
+  cleanup(){db.prepare('DELETE FROM admin_sessions WHERE expires<?').run(Date.now());const cutoff=Date.now()-30*86400000;db.prepare('DELETE FROM tickets WHERE order_id IN (SELECT id FROM orders WHERE created<?)').run(cutoff);db.prepare('DELETE FROM orders WHERE created<?').run(cutoff);db.prepare('DELETE FROM traffic WHERE day<?').run(todayKst(new Date(cutoff)));db.prepare('DELETE FROM audit WHERE created<?').run(Date.now()-5*365*86400000);db.prepare('DELETE FROM ledger WHERE created<?').run(Date.now()-5*365*86400000);},
   close(){db.close();}
  };
  return store;

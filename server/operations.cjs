@@ -1,18 +1,10 @@
-const crypto=require('node:crypto');
 const PRODUCT=require('./product.cjs');
 const {sections}=require('./report.cjs');
+const {registerAdminAuth}=require('./admin-auth.cjs');
 const paid=o=>!!o.paid_at&&o.status!=='refunded'&&(!o.refund_state||o.refund_state==='declined');
 function registerOperations(app,{store,config,mode,env,auth,cancel}){
  function text(value,min=1,max=1500){return typeof value==='string'&&value.trim().length>=min&&value.length<=max&&!/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value);}
- function admin(req,res,next){
-  const local=config.demo&&['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
-  const token=req.get('Authorization')?.replace(/^Bearer /,'');
-  if(local)return next();
-  if(!env.ADMIN_ACCESS_TOKEN||env.ADMIN_ACCESS_TOKEN.length<32||!token||token.length>512)return res.status(401).json({error:'관리자 인증이 필요합니다.'});
-  const h=v=>crypto.createHash('sha256').update(v).digest();
-  if(!crypto.timingSafeEqual(h(token),h(env.ADMIN_ACCESS_TOKEN)))return res.status(401).json({error:'관리자 인증이 필요합니다.'});
-  next();
- }
+ const admin=registerAdminAuth(app,{store,config,env});
  function ownMode(req,res,next){const o=store.get(req.params.id);if(!o||o.mode!==mode)return res.status(404).json({error:'주문을 찾을 수 없습니다.'});req.managed=o;next();}
  app.post('/api/events',(req,res)=>{
   if(!['landing','checkout'].includes(req.body?.page))return res.status(400).json({error:'잘못된 집계 요청입니다.'});

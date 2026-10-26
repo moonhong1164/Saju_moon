@@ -30,6 +30,18 @@ with sync_playwright() as p:
  page.locator('#support-form button').click()
  expect(page.locator('#support-status')).to_contain_text('문의를 접수')
  admin=context.new_page();admin.goto(base+'/admin.html')
+ assert admin.request.get(base+'/api/config').json()['demo'] is True
+ expect(admin.locator('#login-note')).not_to_contain_text('연결하고 있습니다')
+ if admin.locator('#account-setup').is_visible():
+  admin.locator('#setup-username').fill('browser_test_admin')
+  admin.locator('#setup-password').fill('Only-for-browser-test-2026')
+  admin.locator('#setup-password-confirm').fill('Only-for-browser-test-2026')
+  admin.locator('#setup-button').click()
+ else:
+  expect(admin.locator('#login-button')).to_be_enabled()
+  admin.locator('#admin-username').fill('browser_test_admin')
+  admin.locator('#admin-password').fill('Only-for-browser-test-2026')
+  admin.locator('#login-button').click()
  expect(admin.locator('#dashboard')).to_be_visible()
  admin.locator('#order-search').fill(email)
  row=admin.locator('#order-list tr').filter(has_text=email)

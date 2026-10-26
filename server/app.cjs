@@ -15,21 +15,22 @@ function configuration(env=process.env){
  const reportEngine=env.REPORT_ENGINE||'rules';
  const reportReady=reportEngine==='rules'||reportEngine==='ai'&&!!env.AI_PROVIDER_KEY&&!!env.AI_MODEL;
  const protectedStorage=!!env.ORDER_DATA_KEY&&Buffer.from(env.ORDER_DATA_KEY,'base64').length===32;
- const enabled=protectedStorage&&!!env.ADMIN_ACCESS_TOKEN&&env.ADMIN_ACCESS_TOKEN.length>=32&&env.SALES_ENABLED==='true'&&env.POLICIES_APPROVED==='true'&&required.every(k=>env[k])&&base?.protocol==='https:'&&env.TOSS_CLIENT_KEY.startsWith('live_ck_')&&env.TOSS_SECRET_KEY.startsWith('live_sk_');
+ const enabled=protectedStorage&&env.ADMIN_ACCOUNT_READY==='true'&&env.SALES_ENABLED==='true'&&env.POLICIES_APPROVED==='true'&&required.every(k=>env[k])&&base?.protocol==='https:'&&env.TOSS_CLIENT_KEY.startsWith('live_ck_')&&env.TOSS_SECRET_KEY.startsWith('live_sk_');
  const sandbox=env.NODE_ENV!=='production'&&env.SALES_ENABLED==='test'&&required.every(k=>env[k])&&base&&env.TOSS_CLIENT_KEY.startsWith('test_ck_')&&env.TOSS_SECRET_KEY.startsWith('test_sk_');
  return {demo,enabled:!!((demo||enabled||sandbox)&&reportReady),reportEngine,test:!!(demo||sandbox),clientKey:env.TOSS_CLIENT_KEY,base:env.PUBLIC_BASE_URL||'http://127.0.0.1:3000',seller:{name:env.SELLER_NAME||'',businessId:env.SELLER_BUSINESS_ID||'',contact:env.SELLER_CONTACT||'',address:env.SELLER_ADDRESS||''}};
 }
 function createApp({store,env=process.env,pay=confirmToss,mail=sendReport,cancel=cancelToss,makePdf=createPdf,makeAi=generateAiReport}){
- const app=express(),config=configuration(env),root=path.join(__dirname,'..');
+ const app=express(),config=configuration({...env,ADMIN_ACCOUNT_READY:store.adminAccount()?'true':'false'}),root=path.join(__dirname,'..');
  const mode=config.demo?'demo':config.test?'test':'live';
  app.disable('x-powered-by');
  app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'",'https://js.tosspayments.com'],styleSrc:["'self'","'unsafe-inline'"],connectSrc:["'self'",'https://*.tosspayments.com'],frameSrc:['https://*.tosspayments.com'],formAction:["'self'",'https://*.tosspayments.com'],imgSrc:["'self'",'data:','https://*.tosspayments.com'],upgradeInsecureRequests:env.NODE_ENV==='production'?[]:null}},referrerPolicy:{policy:'no-referrer'},strictTransportSecurity:env.NODE_ENV==='production'?undefined:false}));
  app.use(express.json({limit:'8kb'}));
- app.use('/api',(_req,res,next)=>{res.set('Cache-Control','no-store');next();});
+ app.use('/api',(_req,res,next)=>{config.enabled=configuration({...env,ADMIN_ACCOUNT_READY:store.adminAccount()?'true':'false'}).enabled;res.set('Cache-Control','no-store');next();});
  app.use('/api',rateLimit({windowMs:60000,limit:300,standardHeaders:true,legacyHeaders:false,message:{error:'요청이 많습니다. 잠시 후 다시 시도해 주세요.'}}));
- app.get('/api/config',(_req,res)=>res.json({product:PRODUCT,enabled:config.enabled,demo:config.demo,test:config.test,clientKey:config.enabled&&!config.demo?config.clientKey:undefined,seller:config.seller,reportEngine:config.reportEngine}));
+ app.get('/api/config',(_req,res)=>{config.enabled=configuration({...env,ADMIN_ACCOUNT_READY:store.adminAccount()?'true':'false'}).enabled;res.json({product:PRODUCT,enabled:config.enabled,demo:config.demo,test:config.test,clientKey:config.enabled&&!config.demo?config.clientKey:undefined,seller:config.seller,reportEngine:config.reportEngine});});
  app.get('/health',(_req,res)=>res.json({ok:true}));
  function open(req,res,next){
+   config.enabled=configuration({...env,ADMIN_ACCOUNT_READY:store.adminAccount()?'true':'false'}).enabled;
    if(!config.enabled)return res.status(503).json({error:'결제 서비스 준비 중입니다. 실제 결제는 아직 열리지 않았습니다.'});
    if(config.test&&!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))return res.status(403).json({error:'테스트 결제는 로컬에서만 가능합니다.'});
    next();
@@ -77,6 +78,7 @@ function createApp({store,env=process.env,pay=confirmToss,mail=sendReport,cancel
   if(busy)return false;busy=true;
   let order,stage='report_generation';
   try{
+   config.enabled=configuration({...env,ADMIN_ACCOUNT_READY:store.adminAccount()?'true':'false'}).enabled;
    if(!config.enabled)return false;
    order=store.claim(mode);if(!order)return false;
    if(Date.now()-(order.delivery_started||order.paid_at)>23*3600000){store.failed(order.id,5);return false;}
@@ -97,7 +99,7 @@ function createApp({store,env=process.env,pay=confirmToss,mail=sendReport,cancel
   }catch{if(order)store.failed(order.id,order.attempts,stage);return false;}finally{busy=false;}
  }
  registerOperations(app,{store,config,mode,env,auth,cancel});
- for(const filename of ['admin.html','admin.js','admin.css','traffic.js','policies.html','policies.js','index.html','style.css','app.js','checkout.html','checkout.js','checkout.css','sample-report.pdf','THIRD_PARTY_NOTICES.txt']){
+ for(const filename of ['setup.html','admin.html','admin.js','admin.css','traffic.js','policies.html','policies.js','index.html','style.css','app.js','checkout.html','checkout.js','checkout.css','sample-report.pdf','THIRD_PARTY_NOTICES.txt']){
   app.get(filename==='index.html'?['/','/index.html']:`/${filename}`,(_req,res)=>res.sendFile(path.join(root,filename)));
  }
  app.use((error,_req,res,_next)=>res.status(error.type==='entity.too.large'?413:400).json({error:'요청 내용을 확인해 주세요.'}));

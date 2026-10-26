@@ -2,13 +2,16 @@ const test=require('node:test'),assert=require('node:assert/strict'),crypto=requ
 const {DatabaseSync}=require('node:sqlite');
 const {createStore}=require('../server/store.cjs');
 const {createApp}=require('../server/app.cjs');
+const {passwordHash}=require('../server/admin-auth.cjs');
 const {sections,createPdf}=require('../server/report.cjs');
 const {generateAiReport,PAGES}=require('../server/ai-report.cjs');
 const {cancelToss}=require('../server/providers.cjs');
 const buyer={name:'운영 테스트',email:'owner@example.com',date:'2005-12-23',calendar:'solar',time:'08:37',agreeTerms:true,agreePrivacy:true,agreeProduction:true};
 async function fixture(t,options={}){
  const store=createStore(':memory:');const service=createApp({store,env:{DEMO_MODE:'1'},...options});const server=service.app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port;t.after(async()=>{await new Promise(r=>server.close(r));store.close();});
- async function req(url,body,token){const response=await fetch(base+url,{method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{})},body:body?JSON.stringify(body):undefined});return {response,data:await response.json()};}
+ let cookie='',csrf='';
+ async function authorize(){if(cookie)return;if(!store.adminAccount())store.createAdmin('test_admin',await passwordHash('Only-for-automated-tests-2026'));const r=await fetch(base+'/api/admin/auth/login',{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Request':'1'},body:JSON.stringify({username:'test_admin',password:'Only-for-automated-tests-2026'})});cookie=r.headers.get('set-cookie')?.split(';')[0]||'';csrf=(await r.json()).csrf;}
+ async function req(url,body,token){if(url.startsWith('/api/admin/')&&options.autoAdmin!==false)await authorize();const response=await fetch(base+url,{method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json','X-Admin-Request':'1'}:{}),...(token?{Authorization:'Bearer '+token}:{}),...(cookie?{Cookie:cookie}:{}),...(body&&csrf?{'X-CSRF-Token':csrf}:{})},body:body?JSON.stringify(body):undefined});return {response,data:await response.json()};}
  return {store,...service,req,base};
 }
 async function purchase(f,fields={}){const {data:o}=await f.req('/api/orders',{...buyer,...fields});assert.ok(o.id);await f.req('/api/orders/'+o.id+'/confirm',{amount:19000,paymentKey:'local-demo'},o.token);await f.processOne();return o;}
@@ -26,11 +29,10 @@ test('report is locked before payment, same prepared content opens after payment
  assert.equal((await f.req(url,null,o.token)).data.downloadReady,false);
  assert.equal((await f.req('/api/admin/summary')).data.totals.net,0);
 });
-test('non-demo admin is locked and token auth is required for every administrative mutation',async t=>{
- const key=crypto.randomBytes(32).toString('hex'),f=await fixture(t,{env:{ADMIN_ACCESS_TOKEN:key}});
+test('all administrative data and mutations require login, even in demo',async t=>{
+ const f=await fixture(t,{autoAdmin:false});
  assert.equal((await f.req('/api/admin/summary')).response.status,401);
- assert.equal((await f.req('/api/admin/summary',null,'wrong')).response.status,401);
- assert.equal((await f.req('/api/admin/summary',null,key)).response.status,200);
+ assert.equal((await f.req('/api/admin/summary',null,'old-bearer-token')).response.status,401);
  assert.equal((await f.req('/api/admin/costs',{monthly:0,ads:0,feePercent:0,perReport:0})).response.status,401);
 });
 test('support request and operator reply are isolated to the correct order',async t=>{

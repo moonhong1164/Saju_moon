@@ -48,7 +48,7 @@ npm run demo
 | `SELLER_CONTACT` / `SELLER_ADDRESS` | 실제 고객센터 연락처 및 사업장 주소 |
 | `SALES_ENABLED` | 기본 `false`. 로컬 결제사 테스트는 `test`, 실결제는 `true` |
 | `POLICIES_APPROVED` | 판매자가 실제 정책 확정 후 `true` |
-| `ADMIN_ACCESS_TOKEN` | 32자 이상의 무작위 관리자 키 |
+| `ADMIN_SETUP_TOKEN` | 첫 관리자 계정 생성용 32자 이상 무작위 소유자 설정 키 |
 | `ORDER_DATA_KEY` | 32바이트 난수의 Base64 인코딩, 개인정보 암호화용 |
 | `REPORT_ENGINE` | `rules` 기본 해설 / `ai` AI 해설 |
 | `AI_PROVIDER_KEY` / `AI_MODEL` | AI 모드에서만 필요한 서버 키와 구조화 출력 지원 모델 |
