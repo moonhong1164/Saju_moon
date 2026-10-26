@@ -20,6 +20,7 @@ function configuration(env=process.env){
  return {demo,enabled:!!((demo||enabled||sandbox)&&reportReady),reportEngine,test:!!(demo||sandbox),clientKey:env.TOSS_CLIENT_KEY,base:env.PUBLIC_BASE_URL||'http://127.0.0.1:3000',seller:{name:env.SELLER_NAME||'',businessId:env.SELLER_BUSINESS_ID||'',contact:env.SELLER_CONTACT||'',address:env.SELLER_ADDRESS||''}};
 }
 function createApp({store,env=process.env,pay=confirmToss,mail=sendReport,cancel=cancelToss,makePdf=createPdf,makeAi=generateAiReport}){
+ env={...env,PUBLIC_BASE_URL:env.PUBLIC_BASE_URL||env.RENDER_EXTERNAL_URL};
  const app=express(),config=configuration({...env,ADMIN_ACCOUNT_READY:store.adminAccount()?'true':'false'}),root=path.join(__dirname,'..');
  const mode=config.demo?'demo':config.test?'test':'live';
  app.disable('x-powered-by');

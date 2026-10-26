@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: sajumoon-server
+    runtime: node
+    plan: starter
+    branch: gh-pages
+    buildCommand: npm ci --no-audit --no-fund && npm run build
+    startCommand: node server/start.cjs
+    healthCheckPath: /health
+    numInstances: 1
+    disk:
+      name: sajumoon-orders
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /var/data
+      - key: SALES_ENABLED
+        value: "false"
+      - key: POLICIES_APPROVED
+        value: "false"
+      - key: REPORT_ENGINE
+        value: rules
+      - key: ADMIN_SETUP_TOKEN
+        generateValue: true

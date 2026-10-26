@@ -53,3 +53,10 @@ test('administrator account and unexpired login survive a database restart',asyn
  const fs=require('node:fs'),os=require('node:os'),path=require('node:path');const dir=fs.mkdtempSync(path.join(os.tmpdir(),'saju-session-')),file=path.join(dir,'db.sqlite');
  try{let store=createStore(file);store.createAdmin(username,await passwordHash(password));const token=crypto.randomBytes(32).toString('hex'),hash=crypto.createHash('sha256').update(token).digest('hex');store.saveAdminSession(hash,username,'csrf',Date.now()+3600000);store.close();store=createStore(file);assert.equal(store.adminAccount().username,username);assert.equal(store.adminSession(hash).username,username);store.close();}finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('Render public URL is recognized without a manually entered PUBLIC_BASE_URL',async t=>{
+ const token=crypto.randomBytes(32).toString('hex'),origin='https://sajumoon-example.onrender.com';
+ const f=await server(t,{NODE_ENV:'production',RENDER_EXTERNAL_URL:origin,ADMIN_SETUP_TOKEN:token});
+ const state=await f.call('auth/session');assert.equal(state.data.configurationIssue,null);assert.equal(state.data.serviceOrigin,origin);
+ assert.equal((await f.call('auth/setup',{username,password,setupToken:token},{origin})).response.status,201);
+});
