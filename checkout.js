@@ -10,14 +10,14 @@ function persist(value){sessionStorage.setItem('sajumoon-order',JSON.stringify(v
 function showOrder(){
  $('#purchase-panel').hidden=true;$('#order-panel').hidden=false;
  $('#order-number').textContent='주문번호: '+active.id;
- $('#order-title').textContent=config?.trial?'무료 테스트 주문 · 실제 결제 및 메일 발송 없음':config?.demo?'모의 주문 · 실제 결제 및 메일 발송 없음':'나의 상세 풀이 주문';
+ $('#order-title').textContent=config?.trial?(config.email?.enabled?'무료 테스트 주문 · 이메일 발송 연결':'무료 테스트 주문 · 실제 결제 및 메일 발송 없음'):config?.demo?'모의 주문 · 실제 결제 및 메일 발송 없음':'나의 상세 풀이 주문';
 }
 async function refresh(){
  if(!active)return;
  try{
   const data=await api('/api/orders/'+active.id,null,active.token);
   $('#order-error').textContent='';
-  $('#order-status').textContent=data.trial&&data.status.startsWith('refund_')?'무료 테스트 주문의 취소 요청을 확인 중입니다. 실제 금액 이동은 없습니다.':data.trial&&data.status==='refunded'?'무료 테스트 주문을 취소했습니다. 실제 금액 이동은 없습니다.':data.trial&&data.status==='sent'?'무료 테스트 PDF가 준비되었습니다. 실제 결제·이메일 발송 없이 아래에서 내려받을 수 있습니다.':data.demo&&data.status==='sent'?'모의 주문으로 PDF를 생성했습니다. 실제 결제나 이메일 발송은 하지 않았습니다.':statusText[data.status]||'주문 상태를 확인해 주세요.';
+  $('#order-status').textContent=data.trial&&data.status.startsWith('refund_')?'무료 테스트 주문의 취소 요청을 확인 중입니다. 실제 금액 이동은 없습니다.':data.trial&&data.status==='refunded'?'무료 테스트 주문을 취소했습니다. 실제 금액 이동은 없습니다.':data.trial&&data.status==='sent'&&data.emailAccepted?'PDF 이메일 발송 요청이 접수되었습니다. 수신함과 스팸함을 확인해 주세요. 아래에서 바로 내려받을 수도 있습니다.':data.trial&&data.status==='sent'?'무료 테스트 PDF가 준비되었습니다. 실제 결제·이메일 발송 없이 아래에서 내려받을 수 있습니다.':data.demo&&data.status==='sent'?'모의 주문으로 PDF를 생성했습니다. 실제 결제나 이메일 발송은 하지 않았습니다.':statusText[data.status]||'주문 상태를 확인해 주세요.';
   $('#download-report').hidden=!data.downloadReady;
   $('#open-report').hidden=!data.reportReady;
   clearTimeout(pollTimer);
@@ -76,12 +76,16 @@ async function init(){
   if(config.reportEngine==='ai'){$('#report-method-note').textContent='검증된 명식·오행에 AI 해설을 연결합니다. 전문가 개별 감정·대운·용신·미래 사건 예측은 포함하지 않습니다. 공개 샘플은 기본 해설의 구성·디자인 예시입니다.';$('#ai-consent-label').hidden=false;$('#agree-ai').required=true;}
   if(config.seller.name)$('#seller-info').textContent=`판매자: ${config.seller.name} / 사업자번호: ${config.seller.businessId}\n주소: ${config.seller.address}\n문의: ${config.seller.contact}`;
   if(config.enabled&&!config.demo&&!config.trial){await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://js.tosspayments.com/v2/standard';script.onload=resolve;script.onerror=()=>reject(new Error('결제 모듈을 불러오지 못했습니다.'));document.head.append(script);});}
-  payButton.disabled=!config.enabled;
+  payButton.disabled=!config.enabled||!!(config.email&&config.email.mode!=='off'&&!config.email.enabled);
   if(!config.trial){const price=document.querySelector('.price');price.textContent=new Intl.NumberFormat('ko-KR').format(config.product.amount)+'원';payButton.textContent='19,000원 결제하고 PDF 받기 ↗';}
   if(config.trial&&!config.adminConfigured)document.querySelector('#service-status').textContent='무료 테스트 서버가 연결되었습니다. 먼저 관리자 메뉴에서 첫 계정을 만든 뒤 테스트 주문을 이용해 주세요.';
   if(config.trial){document.querySelector('#refund-form button').textContent='테스트 주문 취소 요청';payButton.textContent='무료 테스트 PDF 만들기 · 결제 없음';document.querySelector('.price').textContent='0원 · 무료 테스트';document.querySelector('.checkout-intro').textContent='무료로 테스트 주문을 만들고 15쪽 PDF를 내려받아 보세요. 현재는 이메일을 보내지 않습니다.';document.querySelector('#report-method-note').textContent='기본 해설로 만드는 무료 테스트입니다. 정식 상품의 예정 가격은 19,000원이며, 지금은 청구되지 않습니다.';for(const [name,label] of [['agreeTerms','[필수] 무료 테스트 이용 안내를 확인했습니다.'],['agreePrivacy','[필수] 테스트 주문·PDF 제작을 위한 정보 저장에 동의합니다.'],['agreeProduction','[필수] 결제와 메일 발송 없이 테스트 PDF 제작에 동의합니다.']]){const parent=document.querySelector('[name='+name+']').parentElement;for(const n of [...parent.childNodes])if(n.nodeType===3)n.remove();parent.append(document.createTextNode(' '+label));}}
-  else if(config.demo)payButton.textContent='모의 주문으로 PDF 만들기 · 결제 없음';
-  else if(config.test)payButton.textContent='19,000원 테스트 결제 · 실제 청구 없음';
+  if(config.trial&&config.email&&config.email.mode!=='off'){
+   $('#service-status').textContent=config.email.enabled?(config.email.mode==='owner_test'?'본인 이메일로만 PDF를 보내는 무료 테스트입니다. Resend 가입 이메일을 입력해 주세요. 실제 카드 결제나 유료 AI는 사용하지 않습니다.':'PDF 이메일 발송이 연결되었습니다. 카드 결제 없는 무료 테스트 주문입니다.'):'이메일 연결 설정이 미완료입니다. 관리자 메뉴의 이메일 연결 상태를 확인해 주세요.';
+   if(config.email.enabled){document.querySelector('.checkout-intro').textContent='15쪽 PDF를 이메일로 보내고 웹에서도 내려받을 수 있습니다.';const parent=document.querySelector('[name=agreeProduction]').parentElement;for(const n of [...parent.childNodes])if(n.nodeType===3)n.remove();parent.append(document.createTextNode(' [필수] 결제 없이 PDF 제작·이메일 발송을 시작하는 데 동의합니다.'));}
+  }
+  if(config.demo)payButton.textContent='모의 주문으로 PDF 만들기 · 결제 없음';
+  else if(config.test&&!config.trial)payButton.textContent='19,000원 테스트 결제 · 실제 청구 없음';
  }catch{$('#service-status').textContent='무료 테스트 서버 연결 전입니다. 아직 주문을 만들 수 없으며 샘플 PDF는 내려받을 수 있습니다. 서버 연결 안내에서 Free 설정을 확인해 주세요.';}
  try{active=JSON.parse(sessionStorage.getItem('sajumoon-order')||'null');confirmation=JSON.parse(sessionStorage.getItem('sajumoon-confirmation')||'null');}catch{}
  if(params.get('result')==='success'){

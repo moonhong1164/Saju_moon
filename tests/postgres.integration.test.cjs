@@ -47,6 +47,13 @@ test('PostgreSQL: free checkout, encrypted persistence, login restart, refund, c
   await Promise.all(jobs.map(o=>store.paid(o.id,'trial-'+o.id)));
   const claims=await Promise.all(Array.from({length:6},()=>store.claim('trial'))),nonempty=claims.filter(Boolean);assert.equal(nonempty.length,4);assert.equal(new Set(nonempty.map(o=>o.id)).size,4);
  });
+ await t.test('explicit mail requests persist delivery intent and reject duplicate or refunded jobs',async()=>{
+  const message=await store.create({name:'메일 테스트',date:'2000-01-07',calendar:'solar',time:'',emailDelivery:'off'},'owner@example.com','email_test',{amount:0});
+  await store.paid(message.id,'mail-test-'+message.id);await store.pdf(message.id,Buffer.from('%PDF-test'));await store.sent(message.id,'free-trial-no-email');
+  assert.equal(await store.queueEmail(message.id,'owner_test'),true);assert.equal(await store.queueEmail(message.id,'owner_test'),false);
+  const row=await store.get(message.id);assert.equal(row.input.emailDelivery,'owner_test');assert.equal(row.mail_epoch,1);
+  await store.refunded(message.id);assert.equal(await store.queueEmail(message.id,'owner_test'),false);
+ });
  await t.test('free quota stays atomic under concurrent requests',async()=>{
   const results=await Promise.allSettled(Array.from({length:7},()=>store.create({name:'quota',date:'2000-01-07',calendar:'solar',time:''},'quota@example.com','trial',{amount:0})));
   assert.equal(results.filter(r=>r.status==='fulfilled').length,5);

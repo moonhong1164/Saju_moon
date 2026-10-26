@@ -7,6 +7,7 @@ const PRODUCT=require('./product.cjs');
 const LIMITS=require('./free-plan.cjs');
 const {createPdf,sections}=require('./report.cjs');
 const {generateAiReport}=require('./ai-report.cjs');
+const EMAIL=require('./email-delivery.cjs');
 const {resolveDataKey}=require('./data-key.cjs');
 const {registerOperations,paid}=require('./operations.cjs');
 const {confirmToss,sendReport,cancelToss}=require('./providers.cjs');
@@ -25,13 +26,14 @@ function configuration(env=process.env){
 function createApp({store,env=process.env,pay=confirmToss,mail=sendReport,cancel=cancelToss,makePdf=createPdf,makeAi=generateAiReport}){
  env={...env,STORAGE_ENCRYPTED:store.encrypted?'true':'false',ORDER_DATA_KEY:resolveDataKey(env),PUBLIC_BASE_URL:env.PUBLIC_BASE_URL||env.RENDER_EXTERNAL_URL};
  const app=express(),config=configuration({...env,ADMIN_ACCOUNT_READY:'false'}),root=path.join(__dirname,'..');
+ const emailConfig=EMAIL.configuration(env,config);
  const mode=config.trial?'trial':config.demo?'demo':config.test?'test':'live';
  app.disable('x-powered-by');
  app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'",'https://js.tosspayments.com'],styleSrc:["'self'","'unsafe-inline'"],connectSrc:["'self'",'https://*.tosspayments.com'],frameSrc:['https://*.tosspayments.com'],formAction:["'self'",'https://*.tosspayments.com'],imgSrc:["'self'",'data:','https://*.tosspayments.com'],upgradeInsecureRequests:env.NODE_ENV==='production'?[]:null}},referrerPolicy:{policy:'no-referrer'},strictTransportSecurity:env.NODE_ENV==='production'?undefined:false}));
  app.use(express.json({limit:'8kb'}));
  app.use('/api',async(_req,res,next)=>{config.enabled=configuration({...env,ADMIN_ACCOUNT_READY:await store.adminAccount()?'true':'false'}).enabled;res.set('Cache-Control','no-store');next();});
  app.use('/api',rateLimit({windowMs:60000,limit:300,standardHeaders:true,legacyHeaders:false,message:{error:'요청이 많습니다. 잠시 후 다시 시도해 주세요.'}}));
- app.get('/api/config',async(_req,res)=>{config.enabled=configuration({...env,ADMIN_ACCOUNT_READY:await store.adminAccount()?'true':'false'}).enabled;res.json({product:PRODUCT,freeLimits:config.trial?LIMITS:undefined,enabled:config.enabled,demo:config.demo,trial:config.trial,adminConfigured:!!await store.adminAccount(),test:config.test,clientKey:config.enabled&&!config.demo&&!config.trial?config.clientKey:undefined,seller:config.seller,reportEngine:config.reportEngine});});
+ app.get('/api/config',async(_req,res)=>{config.enabled=configuration({...env,ADMIN_ACCOUNT_READY:await store.adminAccount()?'true':'false'}).enabled;res.json({product:PRODUCT,freeLimits:config.trial?LIMITS:undefined,enabled:config.enabled,demo:config.demo,trial:config.trial,adminConfigured:!!await store.adminAccount(),test:config.test,clientKey:config.enabled&&!config.demo&&!config.trial?config.clientKey:undefined,seller:config.seller,reportEngine:config.reportEngine,email:EMAIL.publicConfiguration(emailConfig)});});
  app.get('/health',async(_req,res)=>{try{if(store.health)await store.health();else await store.adminAccount();res.json({ok:true});}catch{res.status(503).json({ok:false});}});
  async function open(req,res,next){
    config.enabled=configuration({...env,ADMIN_ACCOUNT_READY:await store.adminAccount()?'true':'false'}).enabled;
@@ -46,7 +48,9 @@ function createApp({store,env=process.env,pay=confirmToss,mail=sendReport,cancel
   if(agreeTerms!==true||agreePrivacy!==true||agreeProduction!==true)return res.status(400).json({error:'약관·개인정보·보고서 제작 동의를 확인해 주세요.'});
   if(typeof date!=='string'||typeof calendar!=='string'||typeof time!=='string')return res.status(400).json({error:'출생 정보를 확인해 주세요.'});
   if(config.reportEngine==='ai'&&agreeAi!==true)return res.status(400).json({error:'AI 해설 작성을 위한 계산 정보 처리 동의가 필요합니다.'});
-  const input={name:name.trim(),date,calendar,time,...(config.trial?{trial:true}:{})};
+  if(emailConfig.mode!=='off'&&!emailConfig.ready)return res.status(503).json({error:'메일 발송 설정이 완료되지 않았습니다. 관리자에서 연결 상태를 확인해 주세요.'});
+  if(!EMAIL.checkRecipient(emailConfig,email))return res.status(400).json({error:'메일 테스트 모드에서는 설정된 본인 수신 이메일만 사용할 수 있습니다. Resend 가입 이메일을 확인해 주세요.'});
+  const input={name:name.trim(),date,calendar,time,emailDelivery:emailConfig.ready?emailConfig.mode:'off',...(config.trial?{trial:true}:{})};
   try{calculate(input);}catch(e){return res.status(400).json({error:e.message});}
   try{
    const order=await store.create(input,email.trim(),mode,{source:req.body.source,campaign:req.body.campaign,reportEngine:config.reportEngine,amount:config.trial?0:PRODUCT.amount});
@@ -75,7 +79,7 @@ function createApp({store,env=process.env,pay=confirmToss,mail=sendReport,cancel
     if(config.trial)setImmediate(()=>processOne().catch(()=>{}));
   }catch{await store.error(o.id,'payment_confirmation');return res.status(502).json({error:'결제 승인 확인이 지연되고 있습니다. 중복 결제하지 말고 이 주문에서 다시 확인해 주세요.'});}
  });
- app.get('/api/orders/:id',auth,(req,res)=>res.json({id:req.order.id,status:req.order.refund_state&&req.order.refund_state!=='declined'?(req.order.refund_state==='refunded'?'refunded':'refund_'+req.order.refund_state):req.order.status,amount:config.trial?0:PRODUCT.amount,pages:PRODUCT.pages,downloadReady:paid(req.order)&&!!req.order.pdf,reportReady:paid(req.order)&&!!req.order.report,demo:config.demo,trial:config.trial}));
+ app.get('/api/orders/:id',auth,(req,res)=>res.json({id:req.order.id,status:req.order.refund_state&&req.order.refund_state!=='declined'?(req.order.refund_state==='refunded'?'refunded':'refund_'+req.order.refund_state):req.order.status,amount:config.trial?0:PRODUCT.amount,pages:PRODUCT.pages,downloadReady:paid(req.order)&&!!req.order.pdf,reportReady:paid(req.order)&&!!req.order.report,demo:config.demo,trial:config.trial,emailRequested:EMAIL.orderMode(req.order)!=='off',emailAccepted:EMAIL.accepted(req.order)}));
  app.get('/api/orders/:id/pdf',auth,(req,res)=>{
   if(!req.order.pdf||!paid(req.order))return res.status(404).json({error:'아직 PDF가 준비되지 않았습니다.'});
   res.set({'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="sajumoon-report.pdf"'}).send(Buffer.from(req.order.pdf));
@@ -102,12 +106,14 @@ function createApp({store,env=process.env,pay=confirmToss,mail=sendReport,cancel
 
    if(!order.pdf)await store.pdf(order.id,pdf);
    stage='email_submission';
-   const id=config.trial?'free-trial-no-email':config.demo?'local-demo-no-email':await mail({order,pdf,key:env.RESEND_API_KEY,from:env.MAIL_FROM});
+   let id;
+   if(EMAIL.orderMode(order)==='off')id=config.demo?'local-demo-no-email':'free-trial-no-email';
+   else {if(!EMAIL.maySend(emailConfig,order)){const error=new Error('Email delivery configuration changed or recipient is not allowed.');error.code='email_configuration';error.retryable=false;throw error;}id=await mail({order,pdf,key:env.RESEND_API_KEY,from:emailConfig.from});}
    await store.sent(order.id,id);return true;
-  }catch{if(order)await store.failed(order.id,order.attempts,stage);return false;}finally{busy=false;}
+  }catch(error){if(order){const code=stage==='email_submission'&&['email_configuration','email_credentials','email_verification','email_quota','email_provider'].includes(error.code)?error.code:stage;await store.failed(order.id,error.retryable===false?5:order.attempts,code);}return false;}finally{busy=false;}
  }
- registerOperations(app,{store,config,mode,env,auth,cancel});
- for(const filename of ['admin-preview.html','admin-preview.js','setup.html','admin.html','admin.js','admin.css','traffic.js','policies.html','policies.js','index.html','style.css','app.js','checkout.html','checkout.js','checkout.css','sample-report.pdf','THIRD_PARTY_NOTICES.txt']){
+ registerOperations(app,{store,config,mode,env,auth,cancel,emailConfig});
+ for(const filename of ['email-setup.html','admin-preview.html','admin-preview.js','setup.html','admin.html','admin.js','admin.css','traffic.js','policies.html','policies.js','index.html','style.css','app.js','checkout.html','checkout.js','checkout.css','sample-report.pdf','THIRD_PARTY_NOTICES.txt']){
   app.get(filename==='index.html'?['/','/index.html']:`/${filename}`,(_req,res)=>res.sendFile(path.join(root,filename)));
  }
  app.use((error,_req,res,_next)=>{const inputError=error.type==='entity.too.large'||error.type==='entity.parse.failed';res.status(error.type==='entity.too.large'?413:inputError?400:503).json({error:inputError?'요청 내용을 확인해 주세요.':'저장 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'});});

@@ -1,6 +1,6 @@
 # 첨부 기준에 따른 사주문 운영 기능
 
-**현재 기본값은 Render Free + Neon Free PostgreSQL**입니다. 유료 디스크 대신 외부 DB를 사용하며, 로그인·0원 테스트 주문·PDF 다운로드를 제공합니다. [FREE_HOSTING.md](FREE_HOSTING.md)가 최신 배포 안내입니다. 실제 결제·이메일·유료 AI는 꺼져 있습니다.
+**현재 기본값은 Render Free + Neon Free PostgreSQL**입니다. 유료 디스크 대신 외부 DB를 사용하며, 로그인·0원 테스트 주문·PDF 다운로드를 제공합니다. [FREE_HOSTING.md](FREE_HOSTING.md)가 최신 배포 안내입니다. 기본값에서 실제 결제·이메일·유료 AI는 꺼져 있습니다. 본인 메일 테스트만 선택적으로 켜는 방법은 [EMAIL_SETUP.md](EMAIL_SETUP.md)를 확인하세요.
 
 현재 상품은 **19,000원 · 15쪽**입니다. 기존 자개·연분홍·연보라 PDF 디자인을 유지합니다. 이 문서는 기능 구현과 실제 서비스 연결을 구분합니다.
 
