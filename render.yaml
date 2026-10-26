@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     branch: gh-pages
-    buildCommand: npm ci --no-audit --no-fund && npm run build
+    buildCommand: npm ci --include=dev --no-audit --no-fund && npm run build
     startCommand: node server/start.cjs
     healthCheckPath: /health
     envVars:

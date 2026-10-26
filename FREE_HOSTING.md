@@ -55,3 +55,7 @@ npm run build
 ```
 
 PostgreSQL 통합 검증은 **버려도 되는 로컬 PostgreSQL** 주소를 `SAJU_TEST_DATABASE_URL`로 지정하여 `node --test tests/postgres.integration.test.cjs`를 실행합니다. 테스트는 별도 임시 DB를 만들고 삭제하며, 외부/실제 고객 DB에서는 실행하지 않도록 루프백 주소만 허용합니다. `npm test`만 실행할 때 이 통합 항목은 DB 주소가 없으면 skipped입니다. 이 세션에서는 실제 로컬 PostgreSQL을 사용해 따로 실행했습니다.
+
+## Render 빌드 도구 설치
+
+Render에 NODE_ENV=production이 설정되어 있으므로 빌드 명령은 `npm ci --include=dev --no-audit --no-fund && npm run build`를 사용합니다. `--include=dev`가 없으면 개발 의존성인 esbuild가 빠져 `esbuild: not found`로 실패할 수 있습니다. 수정 후 기존 서비스의 Build Command에도 이 명령이 적용되었는지 확인하고 최신 커밋으로 다시 배포합니다.
