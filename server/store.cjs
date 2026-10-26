@@ -1,6 +1,7 @@
 const {DatabaseSync}=require('node:sqlite');
 const crypto=require('node:crypto');
 const PRODUCT=require('./product.cjs');
+const LIMITS=require('./free-plan.cjs');
 const {todayKst}=require('../src/saju.cjs');
 const hash=v=>crypto.createHash('sha256').update(v).digest('hex');
 const sourceValue=v=>typeof v==='string'&&/^[a-z0-9_-]{1,40}$/.test(v)?v:'direct';
@@ -39,8 +40,8 @@ function createStore(filename,{encryptionKey}={}){
   changeAdminPassword(hash){db.exec('BEGIN');try{db.prepare('UPDATE admin_account SET password_hash=? WHERE id=1').run(hash);db.exec('DELETE FROM admin_sessions');db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}},
   create(input,email,mode='live',attribution={}){
    const id='sm_'+crypto.randomUUID().replaceAll('-',''),token=crypto.randomBytes(32).toString('hex'),now=Date.now(),source=sourceValue(attribution.source),campaign=sourceValue(attribution.campaign);
-   db.exec('BEGIN');try{db.prepare('INSERT INTO orders(id,token_hash,email,input,created,consent_version,mode,source,campaign,report_kind) VALUES(?,?,?,?,?,?,?,?,?,?)').run(id,hash(token),encode(email),encode(JSON.stringify(input)),now,'2026-10-26-v2',mode,source,campaign,attribution.reportEngine==='ai'?'ai':'rules');
-   db.prepare('INSERT INTO ledger(id,mode,amount,created,source,campaign) VALUES(?,?,?,?,?,?)').run(id,mode,PRODUCT.amount,now,source,campaign);db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}return {id,token};
+   db.exec('BEGIN');try{if(mode==='trial'){const day=Date.parse(todayKst()+'T00:00:00+09:00');if(db.prepare("SELECT COUNT(*) AS n FROM ledger WHERE mode='trial' AND created>=?").get(day).n>=LIMITS.dailyOrders||db.prepare("SELECT COUNT(*) AS n FROM orders WHERE mode='trial'").get().n>=LIMITS.retainedOrders){const error=new Error('Free test quota reached.');error.code='SAJU_TRIAL_LIMIT';throw error;}}db.prepare('INSERT INTO orders(id,token_hash,email,input,created,consent_version,mode,source,campaign,report_kind) VALUES(?,?,?,?,?,?,?,?,?,?)').run(id,hash(token),encode(email),encode(JSON.stringify(input)),now,'2026-10-26-v2',mode,source,campaign,attribution.reportEngine==='ai'?'ai':'rules');
+   db.prepare('INSERT INTO ledger(id,mode,amount,created,source,campaign) VALUES(?,?,?,?,?,?)').run(id,mode,attribution.amount===0?0:PRODUCT.amount,now,source,campaign);db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}return {id,token};
   },
   get(id){return unpack(db.prepare('SELECT * FROM orders WHERE id=?').get(id));},
   auth(id,token){if(typeof token!=='string'||!/^\w{64}$/.test(token))return null;const row=db.prepare('SELECT token_hash,created FROM orders WHERE id=?').get(id);if(!row||row.created<Date.now()-30*86400000||!crypto.timingSafeEqual(Buffer.from(row.token_hash),Buffer.from(hash(token))))return null;return this.get(id);},

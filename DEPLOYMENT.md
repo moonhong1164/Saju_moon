@@ -29,3 +29,7 @@ node --check /workspace/Saju_moon/app.js
 GitHub Pages는 결제·메일 서버를 실행할 수 없습니다. 현재 구매 페이지는 API가 없는 경우 결제 버튼을 잠그고 19,000원 상품 설명과 15쪽 샘플을 제공합니다. 실제 판매를 하려면 [COMMERCE_SETUP.md](COMMERCE_SETUP.md)의 Node 서버 호스팅·토스·Resend 연동을 완료하고 Pages의 구매 링크를 서버 구매 주소로 바꾸세요. 무료 풀이와 샘플 PDF는 Pages에 그대로 유지할 수 있습니다.
 
 관리자·문의·환불·유입 통계·수익 계산·선택적 AI 해설의 운영 기준과 30일 출시 순서는 [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md)를 참고하세요. `/admin.html`은 관리자 화면 파일이며 실제 데이터는 인증된 Node API에서만 불러옵니다. Pages 주소에서 화면 파일이 열린다고 관리자 서버가 배포된 것은 아닙니다.
+
+## 현재 기본 무료 배포
+
+최신 기본값은 Render Free + Neon Free PostgreSQL입니다. 유료 디스크는 신청하지 않습니다. [FREE_HOSTING.md](FREE_HOSTING.md)와 브라우저 안내 `setup.html`을 확인하세요. GitHub Pages 단독으로는 무료 구성에서도 로그인/주문 API가 실행되지 않습니다.

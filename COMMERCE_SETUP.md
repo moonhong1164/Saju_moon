@@ -1,5 +1,7 @@
 # 19,000원 · 15쪽 PDF 상품
 
+**현재 기본 배포는 무료 테스트입니다.** Render Free와 Neon Free DB를 사용하고, 청구액은 0원·메일/유료 AI 미호출로 설정했습니다. 먼저 [FREE_HOSTING.md](FREE_HOSTING.md)를 확인하세요. 아래 실판매·자체 Docker/SQLite 구성은 나중에 실제 판매를 켤 때의 별도 안내이며 기본 배포에 유료 디스크를 신청하지 않습니다.
+
 사진의 운영 기준에 따라 추가한 관리자·잠금·통계·AI·환불 기능은 [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md)를 확인하세요.
 
 ## 현재 상태

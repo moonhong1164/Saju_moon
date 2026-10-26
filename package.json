@@ -17,7 +17,8 @@
     "helmet": "8.1.0",
     "korean-lunar-calendar": "0.4.0",
     "lunar-javascript": "1.7.7",
-    "pdfkit": "0.17.2"
+    "pdfkit": "0.17.2",
+    "pg": "8.23.1"
   },
   "devDependencies": {
     "esbuild": "0.28.2"
