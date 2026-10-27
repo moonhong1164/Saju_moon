@@ -38,6 +38,7 @@ function sections(input){
  ]]
 
  ];
+ require('./report-depth.cjs').enrich(rows,r,tenGod);
  return {result:r,rows};
 }
 async function createPdf(input,preparedReport){

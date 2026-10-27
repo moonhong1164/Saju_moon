@@ -69,6 +69,12 @@ test('email provider gets only purchased PDF and uses stable idempotency',async(
 test('report chapters and heavenly-stem relations reflect computed chart',async()=>{
  const s=sections(buyer);assert.equal(s.rows.length,15);assert.equal(tenGod('辛','乙'),'편재');assert.equal(tenGod('辛','戊'),'정인');
  assert.ok(s.rows[2][2][0].includes('신사'));assert.ok(s.rows[7][2][0].includes('편재'));
+ assert.ok(s.rows[7][2].at(-1).includes('여러 자원과 기회를 연결하는 역할'));
+ assert.ok(s.rows[8][2].at(-1).includes('사실·감정·요청'));
+ const unknown=sections({...buyer,time:''});
+ assert.ok(!unknown.rows[7][2].at(-1).includes('시간의'));
+ const different=sections({...buyer,date:'2005-12-24'});
+ assert.notEqual(s.rows[3][2].at(-1),different.rows[3][2].at(-1));
  const pdf=await createPdf(buyer);assert.equal(pdf.subarray(0,4).toString(),'%PDF');
  fs.writeFileSync('/tmp/saju-commerce-test.pdf',pdf);
 });
