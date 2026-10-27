@@ -17,7 +17,7 @@ async function refresh(){
  try{
   const data=await api('/api/orders/'+active.id,null,active.token);
   $('#order-error').textContent='';
-  $('#order-status').textContent=data.trial&&data.status.startsWith('refund_')?'무료 테스트 주문의 취소 요청을 확인 중입니다. 실제 금액 이동은 없습니다.':data.trial&&data.status==='refunded'?'무료 테스트 주문을 취소했습니다. 실제 금액 이동은 없습니다.':data.trial&&data.status==='sent'&&data.emailAccepted?'PDF 이메일 발송 요청이 접수되었습니다. 수신함과 스팸함을 확인해 주세요. 아래에서 바로 내려받을 수도 있습니다.':data.trial&&data.status==='sent'?'무료 테스트 PDF가 준비되었습니다. 실제 결제·이메일 발송 없이 아래에서 내려받을 수 있습니다.':data.demo&&data.status==='sent'?'모의 주문으로 PDF를 생성했습니다. 실제 결제나 이메일 발송은 하지 않았습니다.':statusText[data.status]||'주문 상태를 확인해 주세요.';
+  $('#order-status').textContent=!data.emailRequested&&['paid','processing'].includes(data.status)?'15쪽 PDF를 준비하고 있습니다. 완성되면 이 화면에서 내려받을 수 있습니다.':!data.emailRequested&&data.status==='delivery_failed'?'PDF 제작을 완료하지 못했습니다. 주문번호와 함께 문의해 주세요.':data.trial&&data.status.startsWith('refund_')?'무료 테스트 주문의 취소 요청을 확인 중입니다. 실제 금액 이동은 없습니다.':data.trial&&data.status==='refunded'?'무료 테스트 주문을 취소했습니다. 실제 금액 이동은 없습니다.':data.trial&&data.status==='sent'&&data.emailAccepted?'PDF 이메일 발송 요청이 접수되었습니다. 수신함과 스팸함을 확인해 주세요. 아래에서 바로 내려받을 수도 있습니다.':data.trial&&data.status==='sent'?'무료 테스트 PDF가 준비되었습니다. 실제 결제·이메일 발송 없이 아래에서 내려받을 수 있습니다.':data.demo&&data.status==='sent'?'모의 주문으로 PDF를 생성했습니다. 실제 결제나 이메일 발송은 하지 않았습니다.':statusText[data.status]||'주문 상태를 확인해 주세요.';
   $('#download-report').hidden=!data.downloadReady;
   $('#open-report').hidden=!data.reportReady;
   clearTimeout(pollTimer);
@@ -84,6 +84,7 @@ async function init(){
    $('#service-status').textContent=config.email.enabled?(config.email.mode==='owner_test'?'본인 이메일로만 PDF를 보내는 무료 테스트입니다. Resend 가입 이메일을 입력해 주세요. 실제 카드 결제나 유료 AI는 사용하지 않습니다.':'PDF 이메일 발송이 연결되었습니다. 카드 결제 없는 무료 테스트 주문입니다.'):'이메일 연결 설정이 미완료입니다. 관리자 메뉴의 이메일 연결 상태를 확인해 주세요.';
    if(config.email.enabled){document.querySelector('.checkout-intro').textContent='15쪽 PDF를 이메일로 보내고 웹에서도 내려받을 수 있습니다.';const parent=document.querySelector('[name=agreeProduction]').parentElement;for(const n of [...parent.childNodes])if(n.nodeType===3)n.remove();parent.append(document.createTextNode(' [필수] 결제 없이 PDF 제작·이메일 발송을 시작하는 데 동의합니다.'));}
   }
+  if(config.email?.mode==='off')document.querySelector('.checkout-intro').textContent='15쪽 PDF를 웹에서 읽고 내려받으세요. 이메일은 발송하지 않습니다. 완성된 파일은 이 브라우저에서 기기에 저장해 주세요.';
   if(config.demo)payButton.textContent='모의 주문으로 PDF 만들기 · 결제 없음';
   else if(config.test&&!config.trial)payButton.textContent='19,000원 테스트 결제 · 실제 청구 없음';
  }catch{$('#service-status').textContent='무료 테스트 서버 연결 전입니다. 아직 주문을 만들 수 없으며 샘플 PDF는 내려받을 수 있습니다. 서버 연결 안내에서 Free 설정을 확인해 주세요.';}
