@@ -42,22 +42,25 @@ function createApp({store,env=process.env,pay=confirmToss,mail=sendReport,cancel
    if(config.test&&!config.trial&&!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))return res.status(403).json({error:'테스트 결제는 로컬에서만 가능합니다.'});
    next();
  }
- app.post('/api/orders',open,async(req,res)=>{
+ async function createOrder(req,res,manual=false){
+  if(manual&&!config.trial)return res.status(409).json({error:'관리자 수동 제작은 무료 운영 모드에서만 사용할 수 있습니다.'});
   const {email,name='',date,calendar='solar',time='',agreeTerms,agreePrivacy,agreeProduction,agreeAi}=req.body||{};
   if(typeof email!=='string'||email.length>254||!/^[-a-zA-Z0-9.!#$%&'*+/=?^_`{|}~]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)||email.includes('..'))return res.status(400).json({error:'수신 가능한 이메일 주소를 확인해 주세요.'});
   if(typeof name!=='string'||name.length>30||!/^[가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9 .·_-]*$/.test(name))return res.status(400).json({error:'이름은 한글·영문·숫자로 30자 이내로 입력해 주세요.'});
   if(agreeTerms!==true||agreePrivacy!==true||agreeProduction!==true)return res.status(400).json({error:'약관·개인정보·보고서 제작 동의를 확인해 주세요.'});
   if(typeof date!=='string'||typeof calendar!=='string'||typeof time!=='string')return res.status(400).json({error:'출생 정보를 확인해 주세요.'});
   if(config.reportEngine==='ai'&&agreeAi!==true)return res.status(400).json({error:'AI 해설 작성을 위한 계산 정보 처리 동의가 필요합니다.'});
-  if(emailConfig.mode!=='off'&&!emailConfig.ready)return res.status(503).json({error:'메일 발송 설정이 완료되지 않았습니다. 관리자에서 연결 상태를 확인해 주세요.'});
-  if(!EMAIL.checkRecipient(emailConfig,email))return res.status(400).json({error:'메일 테스트 모드에서는 설정된 본인 수신 이메일만 사용할 수 있습니다. Resend 가입 이메일을 확인해 주세요.'});
-  const input={name:name.trim(),date,calendar,time,emailDelivery:emailConfig.ready?emailConfig.mode:'off',...(config.trial?{trial:true}:{})};
+  if(!manual&&emailConfig.mode!=='off'&&!emailConfig.ready)return res.status(503).json({error:'메일 발송 설정이 완료되지 않았습니다. 관리자에서 연결 상태를 확인해 주세요.'});
+  if(!manual&&!EMAIL.checkRecipient(emailConfig,email))return res.status(400).json({error:'메일 테스트 모드에서는 설정된 본인 수신 이메일만 사용할 수 있습니다. Resend 가입 이메일을 확인해 주세요.'});
+  const input={name:name.trim(),date,calendar,time,emailDelivery:!manual&&emailConfig.ready?emailConfig.mode:'off',...(manual?{manualProduction:true}:config.trial?{trial:true}:{})};
   try{calculate(input);}catch(e){return res.status(400).json({error:e.message});}
   try{
    const order=await store.create(input,email.trim(),mode,{source:req.body.source,campaign:req.body.campaign,reportEngine:config.reportEngine,amount:config.trial?0:PRODUCT.amount});
+   if(manual){await store.paid(order.id,'manual-'+order.id);setImmediate(()=>processOne().catch(()=>{}));}
    res.status(201).json({...order,amount:config.trial?0:PRODUCT.amount,currency:PRODUCT.currency,orderName:PRODUCT.name});
-  }catch(error){if(error.code==='SAJU_TRIAL_LIMIT')return res.status(429).json({error:`무료 테스트 보호 한도(하루 ${LIMITS.dailyOrders}건 또는 보관 ${LIMITS.retainedOrders}건)에 도달했습니다. 관리자에게 문의해 주세요.`});throw error;}
- });
+  }catch(error){if(error.code==='SAJU_TRIAL_LIMIT')return res.status(429).json({error:`${manual?'관리자 제작':'무료 테스트'} 보호 한도(하루 ${manual?LIMITS.adminDailyOrders:LIMITS.dailyOrders}건 또는 보관 ${manual?LIMITS.adminRetainedOrders:LIMITS.retainedOrders}건)에 도달했습니다. 관리자에게 문의해 주세요.`});throw error;}
+ }
+ app.post('/api/orders',open,(req,res)=>createOrder(req,res));
  async function auth(req,res,next){
   const token=req.get('Authorization')?.replace(/^Bearer /,'');
   const order=await store.auth(req.params.id,token);
@@ -113,7 +116,7 @@ function createApp({store,env=process.env,pay=confirmToss,mail=sendReport,cancel
    await store.sent(order.id,id);return true;
   }catch(error){if(order){const code=stage==='email_submission'&&['email_configuration','email_credentials','email_verification','email_quota','email_provider'].includes(error.code)?error.code:stage;await store.failed(order.id,error.retryable===false?5:order.attempts,code);}return false;}finally{busy=false;}
  }
- registerOperations(app,{store,config,mode,env,auth,cancel,emailConfig});
+ registerOperations(app,{store,config,mode,env,auth,cancel,emailConfig,createManual:(req,res)=>createOrder(req,res,true)});
  for(const filename of ['email-setup.html','admin-preview.html','admin-preview.js','setup.html','admin.html','admin.js','admin.css','traffic.js','policies.html','policies.js','index.html','style.css','app.js','checkout.html','checkout.js','checkout.css','sample-report.pdf','THIRD_PARTY_NOTICES.txt']){
   app.get(filename==='index.html'?['/','/index.html']:`/${filename}`,(_req,res)=>res.sendFile(path.join(root,filename)));
  }

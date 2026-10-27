@@ -60,6 +60,15 @@ test('PostgreSQL: free checkout, encrypted persistence, login restart, refund, c
   assert.ok(results.filter(r=>r.status==='rejected').every(r=>r.reason.code==='SAJU_TRIAL_LIMIT'));
   assert.equal((await store.summary('trial')).totals.orders,10);
  });
+ await t.test('manual quota is independent, atomic, and cannot be selected by public attribution',async()=>{
+  const publicFake=await Promise.allSettled([store.create({name:'fake'},'fake@example.com','trial',{source:'admin_manual',amount:0})]);
+  assert.equal(publicFake[0].status,'rejected');
+  const results=await Promise.allSettled(Array.from({length:105},()=>store.create({name:'관리자',manualProduction:true,emailDelivery:'off'},'owner@example.com','trial',{amount:0})));
+  assert.equal(results.filter(r=>r.status==='fulfilled').length,100);
+  assert.ok(results.filter(r=>r.status==='rejected').every(r=>r.reason.code==='SAJU_TRIAL_LIMIT'));
+  const row=await store.get(results.find(r=>r.status==='fulfilled').value.id);assert.equal(row.input.manualProduction,true);assert.equal(row.source,'admin_manual');
+ });
+
 });
 test('remote PostgreSQL certificate verification cannot be disabled by URL parameters',()=>{
  const config=poolOptions('postgres://user:password@example.neon.tech/db?sslmode=no-verify');assert.equal(config.ssl.rejectUnauthorized,true);assert.equal(new URL(config.connectionString).searchParams.has('sslmode'),false);

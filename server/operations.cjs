@@ -1,11 +1,14 @@
 const EMAIL=require('./email-delivery.cjs');
 const PRODUCT=require('./product.cjs');
+const LIMITS=require('./free-plan.cjs');
+const {disposition}=require('./report-filename.cjs');
 const {sections}=require('./report.cjs');
 const {registerAdminAuth}=require('./admin-auth.cjs');
 const paid=o=>!!o.paid_at&&o.status!=='refunded'&&(!o.refund_state||o.refund_state==='declined');
-function registerOperations(app,{store,config,mode,env,auth,cancel,emailConfig}){
+function registerOperations(app,{store,config,mode,env,auth,cancel,emailConfig,createManual}){
  function text(value,min=1,max=1500){return typeof value==='string'&&value.trim().length>=min&&value.length<=max&&!/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value);}
  const admin=registerAdminAuth(app,{store,config,env});
+ app.post('/api/admin/reports',admin,createManual);
  async function ownMode(req,res,next){const o=await store.get(req.params.id);if(!o||o.mode!==mode)return res.status(404).json({error:'주문을 찾을 수 없습니다.'});req.managed=o;next();}
  app.post('/api/events',async(req,res)=>{
   if(!['landing','checkout'].includes(req.body?.page))return res.status(400).json({error:'잘못된 집계 요청입니다.'});
@@ -27,9 +30,9 @@ function registerOperations(app,{store,config,mode,env,auth,cancel,emailConfig})
   if(!await store.requestRefund(req.order.id,req.body.reason.trim()))return res.status(409).json({error:'이미 요청했거나 환불 요청이 가능한 결제 주문이 아닙니다.'});
   res.status(202).json({status:'refund_requested'});
  });
- app.get('/api/admin/summary',admin,async(_req,res)=>res.json({...(await store.summary(mode)),demo:config.demo,trial:config.trial,encrypted:store.encrypted,reportEngine:config.reportEngine,salesEnabled:config.enabled,email:{...EMAIL.publicConfiguration(emailConfig),missing:emailConfig.missing,from:emailConfig.from,testRecipient:emailConfig.recipient}}));
+ app.get('/api/admin/summary',admin,async(_req,res)=>res.json({...(await store.summary(mode)),productionLimits:LIMITS,demo:config.demo,trial:config.trial,encrypted:store.encrypted,reportEngine:config.reportEngine,salesEnabled:config.enabled,email:{...EMAIL.publicConfiguration(emailConfig),missing:emailConfig.missing,from:emailConfig.from,testRecipient:emailConfig.recipient}}));
  app.get('/api/admin/orders/:id',admin,ownMode,async(req,res)=>{const o=req.managed;res.json({id:o.id,input:o.input,email:o.email,status:o.status,refundState:o.refund_state,hasPdf:!!o.pdf,reportKind:o.report_kind,created:o.created,paidAt:o.paid_at,errorCode:o.last_error,emailAccepted:EMAIL.accepted(o),canEmail:emailConfig.ready&&EMAIL.checkRecipient(emailConfig,o.email),tickets:await store.tickets(o.id),audit:await store.audit(o.id)});});
- app.get('/api/admin/orders/:id/pdf',admin,ownMode,async(req,res)=>{if(!req.managed.pdf)return res.status(404).json({error:'PDF가 없습니다.'});res.type('application/pdf').set('Content-Disposition','attachment; filename="sajumoon-report.pdf"').send(req.managed.pdf);});
+ app.get('/api/admin/orders/:id/pdf',admin,ownMode,async(req,res)=>{if(!req.managed.pdf)return res.status(404).json({error:'PDF가 없습니다.'});res.type('application/pdf').set('Content-Disposition',disposition(req.managed.input.name)).send(req.managed.pdf);});
  app.post('/api/admin/orders/:id/resend',admin,ownMode,async(req,res)=>{
   if(!await store.retry(req.managed.id))return res.status(409).json({error:'발송 완료·최종 실패 주문만 재발송할 수 있습니다. 환불 진행 중에는 재발송하지 않습니다.'});
   res.status(202).json({status:'queued'});
