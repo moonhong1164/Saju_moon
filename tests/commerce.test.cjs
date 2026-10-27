@@ -39,6 +39,7 @@ test('local demo: paid -> 15-page generation -> no real email -> authorized PDF 
  assert.equal(status.status,'sent');assert.equal(status.demo,true);
  const pdf=await fetch(f.base+`/api/orders/${o.id}/pdf`,{headers:{Authorization:'Bearer '+o.token}});
  assert.equal(pdf.status,200);assert.equal(pdf.headers.get('content-type'),'application/pdf');
+ assert.ok(pdf.headers.get('content-disposition').includes("filename*=UTF-8''"+encodeURIComponent(buyer.name)+'.pdf'));
  assert.ok(Buffer.from(await pdf.arrayBuffer()).subarray(0,4).equals(Buffer.from('%PDF')));
  assert.equal((await f.request(`/api/orders/${o.id}/confirm`,{amount:19000,paymentKey:'local-demo'},o.token)).data.status,'sent');
 });
@@ -62,9 +63,18 @@ test('provider approval verifies amount/order/currency/status and sets idempoten
 });
 test('email provider gets only purchased PDF and uses stable idempotency',async()=>{
  let request;
- const id=await sendReport({order:{id:'order',email:'buyer@example.com'},pdf:Buffer.from('test-pdf'),key:'test-key',from:'test@example.com',fetcher:async(_u,o)=>{request=o;return{ok:true,json:async()=>({id:'mail-id'})};}});
+ const id=await sendReport({order:{id:'order',email:'buyer@example.com',input:{name:'달빛'}},pdf:Buffer.from('test-pdf'),key:'test-key',from:'test@example.com',fetcher:async(_u,o)=>{request=o;return{ok:true,json:async()=>({id:'mail-id'})};}});
  assert.equal(id,'mail-id');assert.equal(request.headers['Idempotency-Key'],'saju-report-order');
  assert.equal(JSON.parse(request.body).attachments[0].content,Buffer.from('test-pdf').toString('base64'));
+ assert.equal(JSON.parse(request.body).attachments[0].filename,'달빛.pdf');
+});
+test('PDF filenames preserve nicknames and safely handle empty or unsafe file names',()=>{
+ const {reportFilename,disposition}=require('../server/report-filename.cjs');
+ assert.equal(reportFilename('달빛 산책'),'달빛 산책.pdf');
+ assert.equal(reportFilename(''),'sajumoon-report.pdf');
+ assert.equal(reportFilename('../달빛\r\n/별'),'_달빛___별.pdf');
+ assert.equal(reportFilename('CON'),'_CON.pdf');
+ assert.ok(!disposition('달빛\r\n별').includes('\r'));
 });
 test('report chapters and heavenly-stem relations reflect computed chart',async()=>{
  const s=sections(buyer);assert.equal(s.rows.length,15);assert.equal(tenGod('辛','乙'),'편재');assert.equal(tenGod('辛','戊'),'정인');

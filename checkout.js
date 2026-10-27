@@ -39,7 +39,9 @@ $('#download-report').addEventListener('click',async()=>{
  try{
   const response=await fetch('/api/orders/'+active.id+'/pdf',{headers:{Authorization:'Bearer '+active.token}});
   if(!response.ok)throw new Error('PDF를 내려받지 못했습니다. 잠시 후 다시 시도해 주세요.');
-  const url=URL.createObjectURL(await response.blob()),a=document.createElement('a');a.href=url;a.download='sajumoon-report.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  const encoded=response.headers.get('Content-Disposition')?.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+  const filename=encoded?decodeURIComponent(encoded):'sajumoon-report.pdf';
+  const url=URL.createObjectURL(await response.blob()),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
  }catch(e){$('#order-error').textContent=e.message;}
 });
 $('#buyer-unknown').addEventListener('change',event=>{$('#buyer-time').disabled=event.target.checked;$('#buyer-time').required=!event.target.checked;});

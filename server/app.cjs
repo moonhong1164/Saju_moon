@@ -8,6 +8,7 @@ const LIMITS=require('./free-plan.cjs');
 const {createPdf,sections}=require('./report.cjs');
 const {generateAiReport}=require('./ai-report.cjs');
 const EMAIL=require('./email-delivery.cjs');
+const {disposition}=require('./report-filename.cjs');
 const {resolveDataKey}=require('./data-key.cjs');
 const {registerOperations,paid}=require('./operations.cjs');
 const {confirmToss,sendReport,cancelToss}=require('./providers.cjs');
@@ -82,7 +83,7 @@ function createApp({store,env=process.env,pay=confirmToss,mail=sendReport,cancel
  app.get('/api/orders/:id',auth,(req,res)=>res.json({id:req.order.id,status:req.order.refund_state&&req.order.refund_state!=='declined'?(req.order.refund_state==='refunded'?'refunded':'refund_'+req.order.refund_state):req.order.status,amount:config.trial?0:PRODUCT.amount,pages:PRODUCT.pages,downloadReady:paid(req.order)&&!!req.order.pdf,reportReady:paid(req.order)&&!!req.order.report,demo:config.demo,trial:config.trial,emailRequested:EMAIL.orderMode(req.order)!=='off',emailAccepted:EMAIL.accepted(req.order)}));
  app.get('/api/orders/:id/pdf',auth,(req,res)=>{
   if(!req.order.pdf||!paid(req.order))return res.status(404).json({error:'아직 PDF가 준비되지 않았습니다.'});
-  res.set({'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="sajumoon-report.pdf"'}).send(Buffer.from(req.order.pdf));
+  res.set({'Content-Type':'application/pdf','Content-Disposition':disposition(req.order.input.name)}).send(Buffer.from(req.order.pdf));
  });
  let busy=false;
  async function processOne(){
